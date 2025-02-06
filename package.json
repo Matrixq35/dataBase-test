@@ -1,0 +1,16 @@
+{
+	"name": "my-trump-game",
+	"version": "1.0.0",
+	"description": "Example of a Telegram Trump Token Game",
+	"main": "app.js",
+	"scripts": {
+		"start": "node app.js"
+	},
+	"author": "",
+	"license": "ISC",
+	"dependencies": {
+		"body-parser": "^1.20.3",
+		"express": "^4.21.2",
+		"sqlite3": "^5.1.7"
+	}
+}
