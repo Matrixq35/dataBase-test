@@ -3,48 +3,26 @@
 <head>
   <meta charset="UTF-8" />
   <title>Trump Tokens Game</title>
-
-  <!-- Подключаем скрипт Telegram WebApp (для получения user.id) -->
+  
+  <!-- Подключаем скрипт Telegram WebApp -->
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
-
-  <!-- 
-    1) Запрещаем зум:
-       user-scalable=no и maximum-scale=1.0
-  -->
+  
+  <!-- Отключаем масштабирование и прокрутку (по желанию) -->
   <meta
     name="viewport"
     content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0"
   />
-
   <style>
-    /* 
-      2) Убираем скролл/прокрутку,
-      обнуляем отступы, чтобы весь экран был зафиксирован
-    */
     html, body {
       margin: 0;
       padding: 0;
       width: 100%;
       height: 100%;
-      overflow: hidden;         /* Запрещаем прокрутку */
-      -webkit-overflow-scrolling: none; /* iOS-указание */
+      overflow: hidden;
     }
-
-    /* 
-      (Опционально) Если хотим полностью убрать все жесты «свайпы»,
-      можно добавить touch-action: none;
-      Но тогда клики/тапы по элементам могут тоже перестать работать. 
-      Обычно оставляют auto или manipulation.
-    */
-    /* body {
-      touch-action: none;
-    } */
-
-    /* Примерные стили контента */
     body {
       font-family: sans-serif;
       text-align: center;
-      /* Если нужно слегка отцентровать содержимое по вертикали, можно flex: */
       display: flex;
       flex-direction: column;
       justify-content: center;
@@ -62,7 +40,6 @@
       height: 40px;
       margin-right: 10px;
     }
-
     .coin {
       width: 120px;
       height: 120px;
@@ -72,7 +49,6 @@
     .coin:hover {
       transform: scale(1.1);
     }
-
     .balance-text {
       font-size: 2em;
       font-weight: bold;
@@ -80,13 +56,12 @@
   </style>
 </head>
 <body>
-
   <h1>Trump Tokens Game</h1>
 
   <div class="balance-container">
     <img 
       src="https://cdn.britannica.com/68/216668-050-DD3A9D0A/United-States-President-Donald-Trump-2017.jpg?w=400&h=300&c=crop" 
-      alt="Trump Token" 
+      alt="Trump Token"
     />
     <div class="balance-text" id="balanceValue">0</div>
   </div>
@@ -99,19 +74,30 @@
   />
 
   <script>
-    // --- 1) Инициализируем Telegram WebApp, получаем реальный user.id ---
+    // Инициализируем Telegram WebApp
     const tg = window.Telegram.WebApp;
-    tg.ready(); 
-    // user.id может быть числом или undefined
-    const userId = tg?.initDataUnsafe?.user?.id;
-    // Если нет userId, подставим заглушку
-    const telegramUserId = userId ? String(userId) : "NO_TELEGRAM_ID";
+    tg.ready();
 
-    // --- 2) Настраиваем API-адрес (корень того же домена, где наше приложение) ---
+    // Пытаемся получить реальный user.id
+    const userId = tg.initDataUnsafe?.user?.id;
+    let telegramUserId = null;
+
+    // Если userId есть, конвертим в строку, иначе предупреждаем
+    if (userId) {
+      telegramUserId = String(userId);
+      console.log("At startup, telegramUserId =", telegramUserId);
+      // Сразу загружаем баланс
+      fetchBalance();
+    } else {
+      // Приложение открыто вне Telegram или нет данных пользователя
+      alert("Пожалуйста, откройте игру внутри Telegram!");
+    }
+
+    // Ссылка на ваш сервер (тот же домен, где задеплоен backend)
     const apiURL = window.location.origin;
 
-    // --- 3) Функции работы с балансом ---
     async function fetchBalance() {
+      if (!telegramUserId) return;
       try {
         const response = await fetch(`${apiURL}/api/getBalance`, {
           method: 'POST',
@@ -126,6 +112,7 @@
     }
 
     async function incrementBalance() {
+      if (!telegramUserId) return;
       try {
         const response = await fetch(`${apiURL}/api/incrementBalance`, {
           method: 'POST',
@@ -139,10 +126,7 @@
       }
     }
 
-    // --- 4) При загрузке страницы получаем баланс ---
-    fetchBalance();
-
-    // --- 5) Клик по монете увеличивает баланс ---
+    // Клик по монете
     document.getElementById('trumpCoin').addEventListener('click', incrementBalance);
   </script>
 </body>
