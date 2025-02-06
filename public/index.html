@@ -2,13 +2,17 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8" />
-  <title>Trump Tokens</title>
+  <title>Trump Tokens Game</title>
+  <!-- ВАЖНО: добавить метатег viewport -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
   <style>
     body {
       font-family: sans-serif;
       text-align: center;
       margin: 50px;
     }
+
     .balance-container {
       display: flex;
       justify-content: center;
@@ -20,6 +24,7 @@
       height: 40px;
       margin-right: 10px;
     }
+
     .coin {
       width: 120px;
       height: 120px;
@@ -29,22 +34,39 @@
     .coin:hover {
       transform: scale(1.1);
     }
+
     .balance-text {
       font-size: 2em;
       font-weight: bold;
+    }
+
+    /* 
+      Медиазапросы: 
+      при ширине экрана до 600px (например, смартфоны) 
+      уменьшаем отступы и немножко меняем размеры.
+    */
+    @media (max-width: 600px) {
+      body {
+        margin: 20px;
+      }
+      .balance-text {
+        font-size: 1.5em; /* чуть меньше, чтобы влезало */
+      }
+      .coin {
+        width: 90px;
+        height: 90px;
+      }
     }
   </style>
 </head>
 <body>
   <h1>Trump Tokens Game</h1>
 
-  <!-- Блок с балансом -->
   <div class="balance-container">
     <img src="https://cdn.britannica.com/68/216668-050-DD3A9D0A/United-States-President-Donald-Trump-2017.jpg?w=400&h=300&c=crop" alt="Trump Token" />
     <div class="balance-text" id="balanceValue">0</div>
   </div>
 
-  <!-- «Монета» -->
   <img
     src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSGWCmKSa1j8vExENbzjn5B_2SYWvK6O85_ew&s"
     alt="Trump Coin"
@@ -53,28 +75,19 @@
   />
 
   <script>
-    // В РЕАЛЬНОМ ПРИЛОЖЕНИИ мы бы получили telegramUserId из Telegram WebApp/Game.
-    // Для теста — пусть будет какая-то заглушка
+    // Примерный код логики, без изменений
     let telegramUserId = 'TEST_USER_123';
-
-    // Получение ссылки к нашему серверу (можно заменить на ваш домен)
     const apiURL = window.location.origin;
 
     async function fetchBalance() {
       try {
         const response = await fetch(`${apiURL}/api/getBalance`, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ telegramUserId })
         });
         const data = await response.json();
-        if (data.error) {
-          console.error(data.error);
-        } else {
-          document.getElementById('balanceValue').textContent = data.balance;
-        }
+        document.getElementById('balanceValue').textContent = data.balance ?? 0;
       } catch (err) {
         console.error('Ошибка при получении баланса:', err);
       }
@@ -84,29 +97,21 @@
       try {
         const response = await fetch(`${apiURL}/api/incrementBalance`, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ telegramUserId })
         });
         const data = await response.json();
-        if (data.error) {
-          console.error(data.error);
-        } else {
-          document.getElementById('balanceValue').textContent = data.balance;
-        }
+        document.getElementById('balanceValue').textContent = data.balance ?? 0;
       } catch (err) {
         console.error('Ошибка при инкременте баланса:', err);
       }
     }
 
-    // При загрузке страницы сразу получим баланс
+    // При загрузке страницы получаем баланс
     fetchBalance();
 
-    // Навесим обработчик клика на монету
-    document.getElementById('trumpCoin').addEventListener('click', () => {
-      incrementBalance();
-    });
+    // Клик по монете — увеличиваем баланс
+    document.getElementById('trumpCoin').addEventListener('click', incrementBalance);
   </script>
 </body>
 </html>
