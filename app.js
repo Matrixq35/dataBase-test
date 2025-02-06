@@ -1,52 +1,45 @@
 // app.js
 const express = require('express')
 const path = require('path')
+const fs = require('fs')
 const bodyParser = require('body-parser')
-const { getOrCreateUserBalance, updateBalance } = require('./database')
+const { getOrCreateUser, updateBalance, updateProgress } = require('./database')
 
 const app = express()
 const PORT = process.env.PORT || 3000
 
-// Чтобы Express мог раздавать статику из папки public
-app.use(express.static(path.join(__dirname, 'public')))
+/**
+ * Считываем секретный ключ из ENV:
+ * Например, process.env.ADMIN_KEY.
+ * Если не задан - подставим "NO_KEY" или пустую строку.
+ */
+const ADMIN_KEY = process.env.ADMIN_KEY || 'NO_KEY'
 
-// Поддержка JSON в body
+app.use(express.static(path.join(__dirname, 'public')))
 app.use(bodyParser.json())
 
-// Маршрут для получения текущего баланса
-app.post('/api/getBalance', async (req, res) => {
-	try {
-		const { telegramUserId } = req.body
-		if (!telegramUserId) {
-			return res.status(400).json({ error: 'No Telegram user ID provided' })
-		}
-		const balance = await getOrCreateUserBalance(telegramUserId)
-		res.json({ balance })
-	} catch (err) {
-		console.error('Error in /api/getBalance:', err)
-		res.status(500).json({ error: 'Internal Server Error' })
-	}
-})
+// ----- Ваши API-роуты (getUserData, incrementBalance, updateProgress) -----
 
-// Маршрут для инкремента
-app.post('/api/incrementBalance', async (req, res) => {
-	try {
-		const { telegramUserId } = req.body
-		if (!telegramUserId) {
-			return res.status(400).json({ error: 'No Telegram user ID provided' })
-		}
-		// Получаем текущий баланс или создаём пользователя
-		let balance = await getOrCreateUserBalance(telegramUserId)
-		// Инкрементируем
-		balance += 1
-		// Сохраняем в БД
-		await updateBalance(telegramUserId, balance)
-		// Возвращаем новый баланс
-		res.json({ balance })
-	} catch (err) {
-		console.error('Error in /api/incrementBalance:', err)
-		res.status(500).json({ error: 'Internal Server Error' })
+// Админский маршрут для скачивания базы
+app.get('/download-db', (req, res) => {
+	const adminKey = req.query.key // ключ из query ?key=...
+
+	// Сравниваем с переменной окружения
+	if (adminKey !== ADMIN_KEY) {
+		return res.status(403).send('Access denied.')
 	}
+
+	const dbPath = path.join(__dirname, 'trump_game.db')
+	if (!fs.existsSync(dbPath)) {
+		return res.status(404).send('Database file not found.')
+	}
+
+	res.download(dbPath, 'trump_game.db', err => {
+		if (err) {
+			console.error('Error sending file:', err)
+			res.status(500).send('Error downloading file.')
+		}
+	})
 })
 
 app.listen(PORT, () => {
