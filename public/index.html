@@ -6,8 +6,8 @@
   
   <!-- Подключаем скрипт Telegram WebApp -->
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  
-  <!-- Отключаем масштабирование и прокрутку (по желанию) -->
+
+  <!-- Запрещаем масштабирование, отключаем прокрутку (по желанию) -->
   <meta
     name="viewport"
     content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0"
@@ -78,20 +78,34 @@
     const tg = window.Telegram.WebApp;
     tg.ready();
 
-    // Пытаемся получить реальный user.id
-    const userId = tg.initDataUnsafe?.user?.id;
+    // Здесь будем хранить userId, когда получим
     let telegramUserId = null;
+    const MAX_RETRIES = 10;
+    let retryCount = 0;
 
-    // Если userId есть, конвертим в строку, иначе предупреждаем
-    if (userId) {
-      telegramUserId = String(userId);
-      console.log("At startup, telegramUserId =", telegramUserId);
-      // Сразу загружаем баланс
-      fetchBalance();
-    } else {
-      // Приложение открыто вне Telegram или нет данных пользователя
-      alert("Пожалуйста, откройте игру внутри Telegram!");
+    // Функция, которая пытается получить user.id с некоторой задержкой
+    function initApp() {
+      const userId = tg.initDataUnsafe?.user?.id;
+      
+      if (userId) {
+        // Если userId есть, запоминаем и сразу грузим баланс
+        telegramUserId = String(userId);
+        console.log("Получен telegramUserId =", telegramUserId);
+        fetchBalance();
+      } else {
+        // Если userId пока нет, пробуем несколько раз 
+        retryCount++;
+        if (retryCount <= MAX_RETRIES) {
+          console.log(`Пока нет userId. Попытка #${retryCount}`);
+          setTimeout(initApp, 300); 
+        } else {
+          alert("Не удалось получить user.id (откройте игру в Telegram!).");
+        }
+      }
     }
+
+    // Запускаем процесс инициализации
+    initApp();
 
     // Ссылка на ваш сервер (тот же домен, где задеплоен backend)
     const apiURL = window.location.origin;
@@ -106,6 +120,7 @@
         });
         const data = await response.json();
         document.getElementById('balanceValue').textContent = data.balance ?? 0;
+        console.log("Баланс загружен =", data.balance);
       } catch (err) {
         console.error('Ошибка при получении баланса:', err);
       }
@@ -121,12 +136,13 @@
         });
         const data = await response.json();
         document.getElementById('balanceValue').textContent = data.balance ?? 0;
+        console.log("Инкремент. Новый баланс =", data.balance);
       } catch (err) {
         console.error('Ошибка при инкременте баланса:', err);
       }
     }
 
-    // Клик по монете
+    // Навешиваем обработчик клика на монету
     document.getElementById('trumpCoin').addEventListener('click', incrementBalance);
   </script>
 </body>
