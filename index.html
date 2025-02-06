@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <title>Trump Tokens Game</title>
+
+  <!-- Подключаем Telegram WebApp SDK -->
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+
+  <!-- Запрещаем зум, отключаем скролл (по желанию) -->
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0"
+  />
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+    }
+    body {
+      font-family: sans-serif;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .balance-container {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+    .balance-container img {
+      width: 40px;
+      height: 40px;
+      margin-right: 10px;
+    }
+
+    .coin {
+      width: 120px;
+      height: 120px;
+      cursor: pointer;
+      transition: transform 0.2s ease;
+    }
+    .coin:hover {
+      transform: scale(1.1);
+    }
+
+    .balance-text {
+      font-size: 2em;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <h1>Trump Tokens Game</h1>
+
+  <div class="balance-container">
+    <img 
+      src="https://cdn.britannica.com/68/216668-050-DD3A9D0A/United-States-President-Donald-Trump-2017.jpg?w=400&h=300&c=crop" 
+      alt="Trump Token"
+    />
+    <div class="balance-text" id="balanceValue">0</div>
+  </div>
+
+  <img
+    src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSGWCmKSa1j8vExENbzjn5B_2SYWvK6O85_ew&s"
+    alt="Trump Coin"
+    class="coin"
+    id="trumpCoin"
+  />
+
+  <script>
+    // -- 1) Инициализируем Telegram WebApp --
+    const tg = window.Telegram.WebApp;
+    tg.ready();
+
+    // -- 2) Логика ожидания user.id --
+    let telegramUserId = null;
+    let retryCount = 0;
+    const MAX_RETRY = 10;
+
+    function tryInitUserId() {
+      const userId = tg.initDataUnsafe?.user?.id;
+      
+      if (userId) {
+        // Если есть user.id
+        telegramUserId = String(userId);
+        console.log("User ID найден:", telegramUserId);
+        // Запускаем запрос баланса
+        fetchBalance();
+      } else {
+        // Если нет userId, возможно, приложение открыто не внутри Telegram
+        retryCount++;
+        console.log(`Попытка #${retryCount} получить userId`);
+        if (retryCount > MAX_RETRY) {
+          alert("Не удалось получить user.id. Откройте игру внутри Telegram!");
+          return;
+        }
+        // Повторяем через 300 мс
+        setTimeout(tryInitUserId, 300);
+      }
+    }
+
+    // -- 3) Запускаем определение userId --
+    tryInitUserId();
+
+    // -- 4) URL вашего сервера (по умолчанию то же, что и текущий домен) --
+    const apiURL = window.location.origin;
+
+    // -- 5) Запрос баланса --
+    async function fetchBalance() {
+      if (!telegramUserId) {
+        console.log("fetchBalance: userId не инициализирован");
+        return;
+      }
+      console.log("fetchBalance -> POST /api/getBalance");
+      try {
+        const response = await fetch(`${apiURL}/api/getBalance`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ telegramUserId })
+        });
+        const data = await response.json();
+        console.log("Сервер ответил balance =", data.balance);
+        document.getElementById('balanceValue').textContent = data.balance ?? 0;
+      } catch (err) {
+        console.error('Ошибка при получении баланса:', err);
+      }
+    }
+
+    // -- 6) Инкремент баланса (нажатие на монету) --
+    async function incrementBalance() {
+      if (!telegramUserId) {
+        alert("Нет user.id! Приложение не в Telegram?");
+        return;
+      }
+      console.log("incrementBalance -> POST /api/incrementBalance");
+      try {
+        const response = await fetch(`${apiURL}/api/incrementBalance`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ telegramUserId })
+        });
+        const data = await response.json();
+        console.log("Новый баланс =", data.balance);
+        document.getElementById('balanceValue').textContent = data.balance ?? 0;
+      } catch (err) {
+        console.error('Ошибка при инкременте баланса:', err);
+      }
+    }
+
+    // -- 7) Назначаем обработчик клика --
+    document.getElementById('trumpCoin')
+      .addEventListener('click', incrementBalance);
+  </script>
+</body>
+</html>
