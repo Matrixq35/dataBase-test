@@ -4,6 +4,9 @@
   <meta charset="UTF-8" />
   <title>Trump Tokens Game</title>
 
+  <!-- Подключаем скрипт Telegram WebApp (для получения user.id) -->
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+
   <!-- 
     1) Запрещаем зум:
        user-scalable=no и maximum-scale=1.0
@@ -31,7 +34,7 @@
       (Опционально) Если хотим полностью убрать все жесты «свайпы»,
       можно добавить touch-action: none;
       Но тогда клики/тапы по элементам могут тоже перестать работать. 
-      Обычно оставляют auto или manipluation.
+      Обычно оставляют auto или manipulation.
     */
     /* body {
       touch-action: none;
@@ -54,7 +57,6 @@
       align-items: center;
       margin-bottom: 20px;
     }
-
     .balance-container img {
       width: 40px;
       height: 40px;
@@ -78,10 +80,14 @@
   </style>
 </head>
 <body>
+
   <h1>Trump Tokens Game</h1>
 
   <div class="balance-container">
-    <img src="https://cdn.britannica.com/68/216668-050-DD3A9D0A/United-States-President-Donald-Trump-2017.jpg?w=400&h=300&c=crop" alt="Trump Token" />
+    <img 
+      src="https://cdn.britannica.com/68/216668-050-DD3A9D0A/United-States-President-Donald-Trump-2017.jpg?w=400&h=300&c=crop" 
+      alt="Trump Token" 
+    />
     <div class="balance-text" id="balanceValue">0</div>
   </div>
 
@@ -93,10 +99,18 @@
   />
 
   <script>
-    // Логика по инкременту баланса
-    let telegramUserId = 'TEST_USER_123';
+    // --- 1) Инициализируем Telegram WebApp, получаем реальный user.id ---
+    const tg = window.Telegram.WebApp;
+    tg.ready(); 
+    // user.id может быть числом или undefined
+    const userId = tg?.initDataUnsafe?.user?.id;
+    // Если нет userId, подставим заглушку
+    const telegramUserId = userId ? String(userId) : "NO_TELEGRAM_ID";
+
+    // --- 2) Настраиваем API-адрес (корень того же домена, где наше приложение) ---
     const apiURL = window.location.origin;
 
+    // --- 3) Функции работы с балансом ---
     async function fetchBalance() {
       try {
         const response = await fetch(`${apiURL}/api/getBalance`, {
@@ -125,10 +139,10 @@
       }
     }
 
-    // При загрузке страницы получаем баланс
+    // --- 4) При загрузке страницы получаем баланс ---
     fetchBalance();
 
-    // Клик по монете — увеличиваем баланс
+    // --- 5) Клик по монете увеличивает баланс ---
     document.getElementById('trumpCoin').addEventListener('click', incrementBalance);
   </script>
 </body>
