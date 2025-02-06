@@ -1,7 +1,6 @@
 // app.js
 const express = require('express')
 const path = require('path')
-const fs = require('fs') // <-- Добавляем для проверки и скачивания файла
 const bodyParser = require('body-parser')
 const { getOrCreateUser, updateBalance, updateProgress } = require('./database')
 
@@ -72,31 +71,6 @@ app.post('/api/updateProgress', async (req, res) => {
 		res.status(500).json({ error: 'Internal Server Error' })
 	}
 })
-
-// ============ АДМИНСКИЙ МАРШРУТ ДЛЯ СКАЧИВАНИЯ БАЗЫ ДАННЫХ ============
-app.get('/download-db', (req, res) => {
-	const adminKey = req.query.key // получаем ключ из query-параметра ?key=...
-	if (adminKey !== 'Lesha_Self1') {
-		return res.status(403).send('Access denied.')
-	}
-
-	// Путь к файлу вашей БД (имя может отличаться, если вы его меняли)
-	const dbPath = path.join(__dirname, 'trump_game.db')
-
-	// Проверяем, существует ли файл
-	if (!fs.existsSync(dbPath)) {
-		return res.status(404).send('Database file not found.')
-	}
-
-	// Отправляем файл на скачивание
-	res.download(dbPath, 'trump_game.db', err => {
-		if (err) {
-			console.error('Error sending file:', err)
-			res.status(500).send('Error downloading file.')
-		}
-	})
-})
-// =====================================================================
 
 app.listen(PORT, () => {
 	console.log(`Server is running on http://localhost:${PORT}`)
