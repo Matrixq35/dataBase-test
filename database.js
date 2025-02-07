@@ -2,19 +2,23 @@ const sqlite3 = require('sqlite3').verbose()
 const path = require('path')
 const fs = require('fs')
 
-// Определяем путь к каталогу для базы данных и создаём его, если не существует
-const dataDir = path.join(__dirname, 'data')
+// Используем переменную окружения DATA_FOLDER, если она задана
+const dataDir = process.env.DATA_FOLDER || path.join(__dirname, 'data')
+
+// Создаём каталог для базы данных, если его нет
 if (!fs.existsSync(dataDir)) {
 	fs.mkdirSync(dataDir, { recursive: true })
 }
+
+// Путь к базе данных
 const dbPath = path.join(dataDir, 'trump_game.db')
 
-// Проверяем, есть ли база
+// Проверяем наличие базы данных
 if (!fs.existsSync(dbPath)) {
 	console.log('⚠️ База данных не найдена. Создаём новую...')
 }
 
-// Подключаемся к БД
+// Подключаемся к базе данных
 const db = new sqlite3.Database(dbPath, err => {
 	if (err) {
 		console.error('❌ Ошибка при подключении к БД:', err.message)
@@ -35,9 +39,7 @@ db.serialize(() => {
     `)
 })
 
-/**
- * Получить или создать пользователя
- */
+// Экспортируем функции для работы с базой данных
 function getOrCreateUser(telegramUserId, username = 'Аноним') {
 	return new Promise((resolve, reject) => {
 		db.get(
@@ -75,9 +77,6 @@ function getOrCreateUser(telegramUserId, username = 'Аноним') {
 	})
 }
 
-/**
- * Обновить баланс пользователя
- */
 function updateBalance(telegramUserId, newBalance) {
 	return new Promise((resolve, reject) => {
 		db.run(
@@ -91,13 +90,9 @@ function updateBalance(telegramUserId, newBalance) {
 	})
 }
 
-/**
- * Получить топ 100 игроков
- */
 function getTopPlayers(limit = 100) {
 	return new Promise((resolve, reject) => {
 		db.all(
-			// Теперь выбираем telegram_user_id тоже, чтобы на клиенте отобразить ID, если username отсутствует
 			'SELECT telegram_user_id, username, balance FROM users ORDER BY balance DESC LIMIT ?',
 			[limit],
 			(err, rows) => {
