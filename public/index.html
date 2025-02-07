@@ -7,33 +7,33 @@
   <!-- Подключаем Telegram WebApp (при необходимости) -->
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
 
-  <!-- Запрещаем зум и прокрутку (по желанию) -->
-  <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0"
-  />
+  <!-- Адаптивность для мобильных устройств -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0" />
+
   <style>
+    /* Общие стили для приложения */
     html, body {
       margin: 0;
       padding: 0;
       width: 100%;
       height: 100%;
-      /* overflow: hidden;  <-- если хотим совсем отключить скролл */
+      background-color: #000;  /* Чёрный фон */
+      color: #d3d3d3;          /* Светло-серый текст */
+      font-family: sans-serif;
     }
     body {
-      font-family: sans-serif;
-      text-align: center;
       display: flex;
       flex-direction: column;
-      justify-content: center;
+      justify-content: flex-start;
       align-items: center;
-      margin-bottom: 60px; /* если есть нижняя навигация */
+      padding-bottom: 60px; /* Отступ для нижней навигации */
     }
 
+    /* Контейнеры экранов */
     .screen {
       width: 100%;
-      flex: 1; 
-      display: none; 
+      flex: 1;
+      display: none;
       overflow-y: auto;
       box-sizing: border-box;
       padding: 20px;
@@ -42,7 +42,7 @@
       display: block;
     }
 
-    /* Игра */
+    /* Секция игры */
     .balance-container {
       display: flex;
       justify-content: center;
@@ -68,24 +68,31 @@
       font-weight: bold;
     }
 
-    /* Лидерборд */
+    /* Секция лидерборда */
     #leaderboardList {
-      text-align: left;
-      max-width: 300px;
-      margin: 0 auto; /* центрируем список */
-      padding: 0 10px;
-      list-style-type: none; /* убираем любые маркеры */
+      width: 95%;
+      max-width: 800px;
+      margin: 20px auto;
+      padding: 0;
+      list-style: none;
+    }
+    #leaderboardList li {
+      background: #222;              /* Темно-серый фон для каждого пункта */
+      padding: 15px;
+      margin: 10px 0;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
     }
 
-    /* Навигация (если нужно) */
+    /* Нижняя панель навигации */
     .bottom-nav {
       position: fixed;
       bottom: 0;
       left: 0;
       width: 100%;
       height: 60px;
-      background: #eee;
-      border-top: 1px solid #ccc;
+      background: #000;
+      border-top: 1px solid #444;
       display: flex;
       justify-content: space-around;
       align-items: center;
@@ -97,9 +104,10 @@
       cursor: pointer;
       border: none;
       background: none;
+      color: #d3d3d3;
     }
     .bottom-nav button.active {
-      background: #ddd;
+      background: #333;
       border-radius: 8px;
     }
   </style>
@@ -111,7 +119,7 @@
     <div class="balance-container">
       <img 
         src="https://cdn.britannica.com/68/216668-050-DD3A9D0A/United-States-President-Donald-Trump-2017.jpg" 
-        alt="Trump Token"
+        alt="Trump Token" 
       />
       <div class="balance-text" id="balanceValue">0</div>
     </div>
@@ -126,18 +134,18 @@
   <!-- Экран Лидерборда -->
   <div id="leaderboardScreen" class="screen">
     <h2>Топ игроков</h2>
-    <!-- Используем <ul>, без стандартных "точек" или "цифр" -->
+    <!-- Каждый пункт занимает почти всю ширину экрана -->
     <ul id="leaderboardList"></ul>
   </div>
 
-  <!-- (Необязательно) Нижняя панель навигации -->
+  <!-- Нижняя навигация -->
   <nav class="bottom-nav">
     <button id="btnGame" class="active">Игра</button>
     <button id="btnLeaderboard">Лидерборд</button>
   </nav>
 
   <script>
-    // Инициализация Telegram (если нужно)
+    // Инициализация Telegram WebApp (если требуется)
     const tg = window.Telegram.WebApp;
     tg.ready();
 
@@ -149,12 +157,11 @@
       alert("Приложение запущено вне Telegram (user.id не получен)!");
     }
 
-    // Наш сервер
+    // URL нашего сервера
     const apiURL = window.location.origin;
 
-    // При загрузке экрана пытаемся получить баланс
+    // При загрузке экрана запрашиваем баланс пользователя
     fetchBalance();
-
     async function fetchBalance() {
       if (!telegramUserId) return;
       try {
@@ -193,7 +200,7 @@
 
     document.getElementById('trumpCoin').addEventListener('click', incrementBalance);
 
-    // Лидерборд
+    // Загрузка и отображение лидерборда
     async function loadLeaderboard() {
       try {
         const response = await fetch(`${apiURL}/api/leaderboard`);
@@ -203,7 +210,6 @@
 
         players.forEach((player, index) => {
           const li = document.createElement('li');
-          // Если username не задан, отображаем telegram_user_id
           const name = player.username || player.telegram_user_id;
           li.textContent = `#${index + 1} ${name}  ${player.balance} TRUMPIS`;
           listEl.appendChild(li);
@@ -226,7 +232,7 @@
       btnLeaderboard.classList.remove('active');
     }
     function showLeaderboardScreen() {
-      loadLeaderboard(); // перед показом грузим список
+      loadLeaderboard();
       leaderboardScreen.classList.add('active');
       gameScreen.classList.remove('active');
       btnLeaderboard.classList.add('active');
