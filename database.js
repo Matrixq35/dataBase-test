@@ -3,8 +3,7 @@ const path = require('path')
 const fs = require('fs')
 
 // Определяем путь к базе данных
-const defaultDbPath = path.join(__dirname, 'database', 'trump_game.db') // Локально
-const dbPath = process.env.DB_PATH || defaultDbPath // Используем ENV-переменную, если она есть
+const dbPath = "/data/trump_game.db"; // Теперь Railway не будет удалять БД
 
 // Проверяем, существует ли папка для БД, если её нет — создаём
 const dbDir = path.dirname(dbPath)
