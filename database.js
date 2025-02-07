@@ -2,7 +2,12 @@ const sqlite3 = require('sqlite3').verbose()
 const path = require('path')
 const fs = require('fs')
 
-const dbPath = '/data/trump_game.db'
+// Определяем путь к каталогу для базы данных и создаём его, если не существует
+const dataDir = path.join(__dirname, 'data')
+if (!fs.existsSync(dataDir)) {
+	fs.mkdirSync(dataDir, { recursive: true })
+}
+const dbPath = path.join(dataDir, 'trump_game.db')
 
 // Проверяем, есть ли база
 if (!fs.existsSync(dbPath)) {
@@ -92,7 +97,8 @@ function updateBalance(telegramUserId, newBalance) {
 function getTopPlayers(limit = 100) {
 	return new Promise((resolve, reject) => {
 		db.all(
-			'SELECT username, balance FROM users ORDER BY balance DESC LIMIT ?',
+			// Теперь выбираем telegram_user_id тоже, чтобы на клиенте отобразить ID, если username отсутствует
+			'SELECT telegram_user_id, username, balance FROM users ORDER BY balance DESC LIMIT ?',
 			[limit],
 			(err, rows) => {
 				if (err) return reject(err)

@@ -203,8 +203,8 @@
 
         players.forEach((player, index) => {
           const li = document.createElement('li');
+          // Если username не задан, отображаем telegram_user_id
           const name = player.username || player.telegram_user_id;
-          // Вывод: "#1 Пользователь — Баланс: 123 TRUMPIS"
           li.textContent = `#${index + 1} ${name}  ${player.balance} TRUMPIS`;
           listEl.appendChild(li);
         });

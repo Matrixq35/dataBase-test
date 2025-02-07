@@ -8,12 +8,26 @@ const { getOrCreateUser, updateBalance, getTopPlayers } = require('./database')
 const app = express()
 const PORT = process.env.PORT || 3000
 const ADMIN_KEY = 'Lesha_Self1'
-const dbPath = '/data/trump_game.db'
 
+// Определяем каталог для базы данных
+const dataDir = path.join(__dirname, 'data')
+if (!fs.existsSync(dataDir)) {
+	fs.mkdirSync(dataDir, { recursive: true })
+}
+const dbPath = path.join(dataDir, 'trump_game.db')
+
+// Если ваши статики (например, index.html, css, js) лежат в папке public, оставляем так:
 app.use(express.static(path.join(__dirname, 'public')))
+
+// Если index.html лежит в корне проекта, можно добавить:
+// app.get('/', (req, res) => {
+//   res.sendFile(path.join(__dirname, 'index.html'));
+// });
+
 app.use(bodyParser.json())
 
-const upload = multer({ dest: '/tmp/' })
+// Для загрузки файлов можно указать временную папку (можно использовать системную папку или создать свою)
+const upload = multer({ dest: path.join(__dirname, 'tmp') })
 
 /**
  * Получить баланс пользователя
@@ -37,11 +51,12 @@ app.post('/api/getBalance', async (req, res) => {
  */
 app.post('/api/incrementBalance', async (req, res) => {
 	try {
-		const { telegramUserId } = req.body
+		const { telegramUserId, username } = req.body
 		if (!telegramUserId)
 			return res.status(400).json({ error: '⛔ No Telegram user ID provided' })
 
-		const userData = await getOrCreateUser(telegramUserId)
+		// Передаём username, чтобы обновлять его при изменении
+		const userData = await getOrCreateUser(telegramUserId, username)
 		const newBalance = userData.balance + 1
 
 		await updateBalance(telegramUserId, newBalance)
