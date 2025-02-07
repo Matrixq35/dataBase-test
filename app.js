@@ -1,5 +1,3 @@
-require('dotenv').config() // Загружаем переменные окружения из .env
-
 const express = require('express')
 const path = require('path')
 const fs = require('fs')
@@ -9,7 +7,10 @@ const { getOrCreateUser, updateBalance, getTopPlayers } = require('./database')
 const app = express()
 const PORT = process.env.PORT || 3000
 
-// Получаем путь к базе данных
+// 🔹 Админский ключ (пока в коде)
+const ADMIN_KEY = 'Lesha_Self1'
+
+// 🔹 Указываем путь к базе данных (если `DB_PATH` не задан, используем локальный)
 const dbPath =
 	process.env.DB_PATH || path.join(__dirname, 'database', 'trump_game.db')
 
@@ -76,9 +77,8 @@ app.get('/api/leaderboard', async (req, res) => {
  */
 app.get('/download-db', (req, res) => {
 	const adminKey = req.query.key || ''
-	const expectedKey = process.env.ADMIN_KEY // Ключ из .env
 
-	if (adminKey !== expectedKey) {
+	if (adminKey !== ADMIN_KEY) {
 		return res.status(403).send('⛔ Доступ запрещён. Неверный ключ.')
 	}
 
