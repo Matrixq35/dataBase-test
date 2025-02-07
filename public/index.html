@@ -110,19 +110,49 @@
       background: #333;
       border-radius: 8px;
     }
+
+    /* Контейнер для монеты: центрируем содержимое по горизонтали и, при необходимости, по вертикали */
+.coin-container {
+  display: flex;
+  justify-content: center; /* Центрирование по горизонтали */
+  align-items: center;     /* Центрирование по вертикали */
+  /* Если требуется, чтобы монета была посередине экрана по вертикали, можно задать минимальную высоту.
+     Например, если убрать лишние отступы, можно использовать: */
+  /* min-height: 50vh; */
+}
+
+/* Стили для монеты (кнопки) */
+.coin {
+  width: 120px;
+  height: 120px;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+  /* Если не используется контейнер с flex, можно было бы сделать так: */
+  /* display: block;
+     margin: 20px auto; */
+}
+
+.coin:hover {
+  transform: scale(1.1);
+}
+
   </style>
 </head>
 <body>
   <!-- Экран игры -->
-  <div id="gameScreen" class="screen active">
-    <h1>Trump Tokens Game</h1>
-    <div class="balance-container">
-      <img 
-        src="https://cdn.britannica.com/68/216668-050-DD3A9D0A/United-States-President-Donald-Trump-2017.jpg" 
-        alt="Trump Token" 
-      />
-      <div class="balance-text" id="balanceValue">0</div>
-    </div>
+ <!-- Экран игры -->
+<div id="gameScreen" class="screen active">
+  <h1>Trump Tokens Game</h1>
+  <div class="balance-container">
+    <img 
+      src="https://cdn.britannica.com/68/216668-050-DD3A9D0A/United-States-President-Donald-Trump-2017.jpg" 
+      alt="Trump Token" 
+    />
+    <div class="balance-text" id="balanceValue">0</div>
+  </div>
+  
+  <!-- Контейнер для кнопки (монеты) -->
+  <div class="coin-container">
     <img
       src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSGWCmKSa1j8vExENbzjn5B_2SYWvK6O85_ew&s"
       alt="Trump Coin"
@@ -130,6 +160,8 @@
       id="trumpCoin"
     />
   </div>
+</div>
+
 
   <!-- Экран Лидерборда -->
   <div id="leaderboardScreen" class="screen">
