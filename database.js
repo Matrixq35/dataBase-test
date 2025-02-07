@@ -2,15 +2,14 @@ const sqlite3 = require('sqlite3').verbose()
 const path = require('path')
 const fs = require('fs')
 
-// Гарантированно используем правильную базу
 const dbPath = '/data/trump_game.db'
 
-// Проверяем, существует ли файл БД
+// Проверяем, есть ли база
 if (!fs.existsSync(dbPath)) {
 	console.log('⚠️ База данных не найдена. Создаём новую...')
 }
 
-// Подключаемся к базе
+// Подключаемся к БД
 const db = new sqlite3.Database(dbPath, err => {
 	if (err) {
 		console.error('❌ Ошибка при подключении к БД:', err.message)
@@ -19,7 +18,7 @@ const db = new sqlite3.Database(dbPath, err => {
 	}
 })
 
-// Создаём таблицу пользователей (если её нет)
+// Создаём таблицу, если её нет
 db.serialize(() => {
 	db.run(`
         CREATE TABLE IF NOT EXISTS users (
@@ -43,7 +42,7 @@ function getOrCreateUser(telegramUserId, username = 'Аноним') {
 				if (err) return reject(err)
 
 				if (row) {
-					// Обновляем username, если он изменился
+					// Обновляем username, если изменился
 					if (username && row.username !== username) {
 						db.run(
 							'UPDATE users SET username = ? WHERE telegram_user_id = ?',
@@ -57,7 +56,6 @@ function getOrCreateUser(telegramUserId, username = 'Аноним') {
 						resolve({ balance: row.balance, username: row.username })
 					}
 				} else {
-					// Создаём нового пользователя
 					db.run(
 						'INSERT INTO users (telegram_user_id, balance, username) VALUES (?, 0, ?)',
 						[telegramUserId, username],
@@ -89,7 +87,7 @@ function updateBalance(telegramUserId, newBalance) {
 }
 
 /**
- * Получить топ-100 игроков
+ * Получить топ 100 игроков
  */
 function getTopPlayers(limit = 100) {
 	return new Promise((resolve, reject) => {

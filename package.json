@@ -1,17 +1,19 @@
 {
-  "name": "database",
-  "version": "1.0.0",
-  "main": "app.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "description": "",
-  "dependencies": {
-    "express": "^4.21.2",
-    "multer": "^1.4.5-lts.1",
-    "sqlite3": "^5.1.7"
-  }
+	"name": "trump-game",
+	"version": "1.0.0",
+	"description": "Trump Tokens Clicker Game",
+	"main": "app.js",
+	"scripts": {
+		"start": "node app.js",
+		"dev": "nodemon app.js"
+	},
+	"dependencies": {
+		"express": "^4.18.2",
+		"sqlite3": "^5.1.6",
+		"multer": "^1.4.5-lts",
+		"body-parser": "^1.20.2"
+	},
+	"devDependencies": {
+		"nodemon": "^3.0.1"
+	}
 }
