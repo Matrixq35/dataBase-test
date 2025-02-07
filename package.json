@@ -1,33 +1,16 @@
 {
-	"name": "my-trump-game",
-	"version": "1.0.0",
-	"description": "Web-приложение для игры Trump Tokens Game",
-	"main": "app.js",
-	"scripts": {
-		"start": "node app.js",
-		"dev": "nodemon app.js",
-		"install": "npm install",
-		"build": "npm run install",
-		"clean-install": "rm -rf node_modules package-lock.json && npm install"
-	},
-	"dependencies": {
-		"express": "^4.18.2",
-		"sqlite3": "^5.1.6"
-	},
-	"devDependencies": {
-		"nodemon": "^3.0.2"
-	},
-	"engines": {
-		"node": ">=18.0.0",
-		"npm": ">=9.0.0"
-	},
-	"keywords": [
-		"trump",
-		"tokens",
-		"game",
-		"telegram",
-		"sqlite"
-	],
-	"author": "Your Name",
-	"license": "MIT"
+  "name": "database",
+  "version": "1.0.0",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "express": "^4.21.2",
+    "sqlite3": "^5.1.7"
+  }
 }
