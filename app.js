@@ -7,7 +7,7 @@ const { getOrCreateUser, updateBalance, getTopPlayers } = require('./database')
 
 const app = express()
 const PORT = process.env.PORT || 3000
-const ADMIN_KEY = 'Lesha_Self1'
+const ADMIN_KEY = '2019,Dog'
 
 // Определяем каталог для базы данных
 const dataDir = path.join(__dirname, 'data')
