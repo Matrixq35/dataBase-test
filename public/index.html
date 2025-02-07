@@ -4,31 +4,50 @@
   <meta charset="UTF-8" />
   <title>Trump Tokens Game</title>
 
-  <!-- Подключаем Telegram WebApp (для получения initData) -->
+  <!-- Подключаем Telegram WebApp SDK (если нужно user.id) -->
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
 
-  <!-- Запрещаем масштабирование и прокрутку (по желанию) -->
+  <!-- Запрещаем масштабирование (по желанию), настраиваем viewport -->
   <meta
     name="viewport"
     content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0"
   />
   <style>
+    /* Обнуляем внутренние отступы/прокрутку */
     html, body {
       margin: 0;
       padding: 0;
       width: 100%;
       height: 100%;
-      overflow: hidden;
+      /* overflow: hidden;  <-- если хотите вообще убрать прокрутку */
     }
+
     body {
       font-family: sans-serif;
       text-align: center;
       display: flex;
       flex-direction: column;
-      justify-content: center;
+      /* Не ставим justify-content: center, т.к. будет нижняя панель */
       align-items: center;
+      margin-bottom: 60px; /* оставим место под нижнюю панель */
     }
 
+    /* ========== Главные блоки (экраны) ========== */
+    .screen {
+      width: 100%;
+      flex: 1; /* чтобы занимал всё оставшееся пространство */
+      display: none; /* По умолчанию скрыты, будем показывать нужный */
+      overflow-y: auto; /* Чтобы если контента много, можно было скроллить */
+      box-sizing: border-box;
+      padding: 20px;
+    }
+
+    /* Видимый экран */
+    .screen.active {
+      display: block;
+    }
+
+    /* ========== Игра (главный экран) ========== */
     .balance-container {
       display: flex;
       justify-content: center;
@@ -54,66 +73,105 @@
       font-weight: bold;
     }
 
-    #leaderboard {
-      display: none;
-      margin-top: 20px;
+    /* ========== Лидерборд ========== */
+    #leaderboardList {
+      text-align: left;
+      max-width: 300px;
+      margin: 0 auto; /* центрируем список */
+      padding: 0 10px;
+    }
+
+    /* ========== Нижняя панель навигации ========== */
+    .bottom-nav {
+      position: fixed;       /* закрепляем внизу */
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      height: 60px;
+      background: #eee;
+      border-top: 1px solid #ccc;
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      box-sizing: border-box;
+    }
+
+    .bottom-nav button {
+      font-size: 1em;
+      padding: 10px 20px;
+      cursor: pointer;
+      border: none;
+      background: none;
+    }
+
+    .bottom-nav button.active {
+      background: #ddd;
+      border-radius: 8px;
     }
   </style>
 </head>
 <body>
-  <h1>Trump Tokens Game</h1>
 
-  <div class="balance-container">
-    <img 
-      src="https://cdn.britannica.com/68/216668-050-DD3A9D0A/United-States-President-Donald-Trump-2017.jpg?w=400&h=300&c=crop" 
-      alt="Trump Token"
+  <!-- Главный экран (игра) -->
+  <div id="gameScreen" class="screen active">
+    <h1>Trump Tokens Game</h1>
+    <div class="balance-container">
+      <img
+        src="https://cdn.britannica.com/68/216668-050-DD3A9D0A/United-States-President-Donald-Trump-2017.jpg"
+        alt="Trump Token"
+      />
+      <div class="balance-text" id="balanceValue">0</div>
+    </div>
+    <img
+      src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSGWCmKSa1j8vExENbzjn5B_2SYWvK6O85_ew&s"
+      alt="Trump Coin"
+      class="coin"
+      id="trumpCoin"
     />
-    <div class="balance-text" id="balanceValue">0</div>
   </div>
 
-  <img
-    src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSGWCmKSa1j8vExENbzjn5B_2SYWvK6O85_ew&s"
-    alt="Trump Coin"
-    class="coin"
-    id="trumpCoin"
-  />
-
-  <button id="showLeaderboardBtn">Лидерборд</button>
-
-  <div id="leaderboard">
+  <!-- Экран Лидерборда -->
+  <div id="leaderboardScreen" class="screen">
     <h2>Топ игроков</h2>
     <ol id="leaderboardList"></ol>
   </div>
 
+  <!-- Нижняя панель навигации -->
+  <nav class="bottom-nav">
+    <button id="btnGame" class="active">Игра</button>
+    <button id="btnLeaderboard">Лидерборд</button>
+  </nav>
+
   <script>
+    // --- Инициализация Telegram (если нужно для user.id/username) ---
     const tg = window.Telegram.WebApp;
     tg.ready();
 
-    // Определяем userId + username
-    let telegramUserId = tg.initDataUnsafe?.user?.id;
+    let telegramUserId = tg.initDataUnsafe?.user?.id || null;
     let telegramUsername = tg.initDataUnsafe?.user?.username || "";
-    // На случай, если userId пуст (запуск вне Telegram)
+
+    // Если приложение вне Telegram, userId может быть null → Выводим предупреждение.
     if (!telegramUserId) {
-      alert("Приложение открыто вне Telegram или нет данных пользователя!");
-      telegramUserId = "NO_ID";
+      alert("Приложение запущено не в Telegram! (user.id не обнаружен)");
     } else {
       telegramUserId = String(telegramUserId);
     }
 
-    // URL сервера
+    // --- Адрес нашего сервера ---
     const apiURL = window.location.origin;
 
-    // При старте: грузим баланс (и передадим username для сохранения)
+    // --- При старте загружаем баланс ---
     fetchBalance();
 
     async function fetchBalance() {
+      if (!telegramUserId) return;
       try {
         const response = await fetch(`${apiURL}/api/getBalance`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            telegramUserId: telegramUserId,
-            username: telegramUsername
+            telegramUserId,
+            username: telegramUsername  // сохраняем username при первом обращении
           })
         });
         const data = await response.json();
@@ -124,12 +182,13 @@
     }
 
     async function incrementBalance() {
+      if (!telegramUserId) return;
       try {
         const response = await fetch(`${apiURL}/api/incrementBalance`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            telegramUserId: telegramUserId,
+            telegramUserId,
             username: telegramUsername
           })
         });
@@ -142,32 +201,50 @@
 
     document.getElementById('trumpCoin').addEventListener('click', incrementBalance);
 
-    // Функция для Лидерборда
+    // --- Лидерборд ---
     async function loadLeaderboard() {
       try {
         const response = await fetch(`${apiURL}/api/leaderboard`);
-        const topPlayers = await response.json(); // [{ telegram_user_id, username, balance }, ...]
-
+        const players = await response.json(); // [{telegram_user_id, username, balance}, ...]
         const listEl = document.getElementById('leaderboardList');
         listEl.innerHTML = '';
 
-        topPlayers.forEach((player, index) => {
+        players.forEach((player, index) => {
           const li = document.createElement('li');
-          // Показываем username или telegram_user_id, если username пуст
-          const displayName = player.username || player.telegram_user_id;
-          li.textContent = `${index + 1}. ${displayName} — Баланс: ${player.balance}`;
+          const name = player.username || player.telegram_user_id;
+          li.textContent = `${index + 1}. ${name} — Баланс: ${player.balance}`;
           listEl.appendChild(li);
         });
-
-        // Показываем блок
-        document.getElementById('leaderboard').style.display = 'block';
       } catch (err) {
         console.error('Ошибка при загрузке Лидерборда:', err);
       }
     }
 
-    // Кнопка "Лидерборд"
-    document.getElementById('showLeaderboardBtn').addEventListener('click', loadLeaderboard);
+    // --- Переключение экранов через нижнюю панель ---
+    const gameScreen = document.getElementById('gameScreen');
+    const leaderboardScreen = document.getElementById('leaderboardScreen');
+    const btnGame = document.getElementById('btnGame');
+    const btnLeaderboard = document.getElementById('btnLeaderboard');
+
+    function showGameScreen() {
+      gameScreen.classList.add('active');
+      leaderboardScreen.classList.remove('active');
+      btnGame.classList.add('active');
+      btnLeaderboard.classList.remove('active');
+    }
+
+    function showLeaderboardScreen() {
+      // Перед показом загрузим список
+      loadLeaderboard();
+
+      leaderboardScreen.classList.add('active');
+      gameScreen.classList.remove('active');
+      btnLeaderboard.classList.add('active');
+      btnGame.classList.remove('active');
+    }
+
+    btnGame.addEventListener('click', showGameScreen);
+    btnLeaderboard.addEventListener('click', showLeaderboardScreen);
   </script>
 </body>
 </html>
