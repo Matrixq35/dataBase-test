@@ -1,91 +1,100 @@
-// app.js
+require('dotenv').config() // Загружаем переменные окружения из .env
+
 const express = require('express')
 const path = require('path')
 const fs = require('fs')
 const bodyParser = require('body-parser')
-
-// Импортируем нужные функции
 const { getOrCreateUser, updateBalance, getTopPlayers } = require('./database')
 
 const app = express()
 const PORT = process.env.PORT || 3000
 
-// Раздаём статические файлы из папки public
+// Получаем путь к базе данных
+const dbPath =
+	process.env.DB_PATH || path.join(__dirname, 'database', 'trump_game.db')
+
+// Middleware
 app.use(express.static(path.join(__dirname, 'public')))
 app.use(bodyParser.json())
 
-// 1) Получить/создать пользователя и вернуть баланс
+/**
+ * 1️⃣ Получить текущий баланс пользователя
+ */
 app.post('/api/getBalance', async (req, res) => {
 	try {
 		const { telegramUserId, username } = req.body
 		if (!telegramUserId) {
-			return res.status(400).json({ error: 'No Telegram user ID provided' })
+			return res.status(400).json({ error: '⛔ No Telegram user ID provided' })
 		}
-		// Сохраняем (или обновляем) username, если передан
+
 		const userData = await getOrCreateUser(telegramUserId, username)
-		// userData => { balance, username }
-		res.json({ balance: userData.balance })
+		res.json({ balance: userData.balance, username: userData.username })
 	} catch (err) {
-		console.error('Error in /api/getBalance:', err)
-		res.status(500).json({ error: 'Internal Server Error' })
+		console.error('Ошибка в /api/getBalance:', err)
+		res.status(500).json({ error: '❌ Internal Server Error' })
 	}
 })
 
-// 2) Инкрементируем баланс
+/**
+ * 2️⃣ Инкрементировать баланс пользователя (увеличить на 1)
+ */
 app.post('/api/incrementBalance', async (req, res) => {
 	try {
 		const { telegramUserId, username } = req.body
 		if (!telegramUserId) {
-			return res.status(400).json({ error: 'No Telegram user ID provided' })
+			return res.status(400).json({ error: '⛔ No Telegram user ID provided' })
 		}
 
-		// Сначала getOrCreate — вдруг пользователя нет или username нужно обновить
+		// Получаем текущий баланс
 		const userData = await getOrCreateUser(telegramUserId, username)
-		const currentBalance = userData.balance
+		const newBalance = userData.balance + 1
 
-		// Увеличиваем баланс на 1
-		const newBalance = currentBalance + 1
+		// Обновляем баланс в БД
 		await updateBalance(telegramUserId, newBalance)
-
 		res.json({ balance: newBalance })
 	} catch (err) {
-		console.error('Error in /api/incrementBalance:', err)
-		res.status(500).json({ error: 'Internal Server Error' })
+		console.error('Ошибка в /api/incrementBalance:', err)
+		res.status(500).json({ error: '❌ Internal Server Error' })
 	}
 })
 
-// 3) Лидерборд (топ 100)
+/**
+ * 3️⃣ Получить топ-100 игроков (лидерборд)
+ */
 app.get('/api/leaderboard', async (req, res) => {
 	try {
 		const topPlayers = await getTopPlayers(100)
-		// topPlayers: [{ telegram_user_id, username, balance }, ...]
 		res.json(topPlayers)
 	} catch (err) {
-		console.error('Error in /api/leaderboard:', err)
-		res.status(500).json({ error: 'Internal Server Error' })
+		console.error('Ошибка в /api/leaderboard:', err)
+		res.status(500).json({ error: '❌ Internal Server Error' })
 	}
 })
 
-// Админский маршрут для скачивания БД (как прежде)
+/**
+ * 4️⃣ Скачивание базы данных (только для админа)
+ */
 app.get('/download-db', (req, res) => {
-	const adminKey = req.query.key
-	if (adminKey !== 'Lesha_Self1') {
-		return res.status(403).send('Access denied.')
+	const adminKey = req.query.key || ''
+	const expectedKey = process.env.ADMIN_KEY // Ключ из .env
+
+	if (adminKey !== expectedKey) {
+		return res.status(403).send('⛔ Доступ запрещён. Неверный ключ.')
 	}
 
-	const dbPath = path.join(__dirname, 'trump_game.db')
 	if (!fs.existsSync(dbPath)) {
-		return res.status(404).send('Database file not found.')
+		return res.status(404).send('❌ Файл базы данных не найден.')
 	}
 
 	res.download(dbPath, 'trump_game.db', err => {
 		if (err) {
-			console.error('Error sending file:', err)
-			res.status(500).send('Error downloading file.')
+			console.error('Ошибка при отправке файла:', err)
+			res.status(500).send('❌ Ошибка при скачивании файла.')
 		}
 	})
 })
 
+// Запуск сервера
 app.listen(PORT, () => {
-	console.log(`Server is running on http://localhost:${PORT}`)
+	console.log(`🚀 Сервер запущен на http://localhost:${PORT}`)
 })
