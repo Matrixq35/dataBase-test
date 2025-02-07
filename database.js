@@ -1,13 +1,28 @@
-// database.js
 const sqlite3 = require('sqlite3').verbose()
 const path = require('path')
+const fs = require('fs')
 
-const dbPath = path.join(__dirname, 'trump_game.db')
-const db = new sqlite3.Database(dbPath)
+// Определяем путь к базе данных
+const defaultDbPath = path.join(__dirname, 'database', 'trump_game.db') // Локально
+const dbPath = process.env.DB_PATH || defaultDbPath // Используем ENV-переменную, если она есть
 
+// Проверяем, существует ли папка для БД, если её нет — создаём
+const dbDir = path.dirname(dbPath)
+if (!fs.existsSync(dbDir)) {
+	fs.mkdirSync(dbDir, { recursive: true })
+}
+
+// Подключение к базе данных
+const db = new sqlite3.Database(dbPath, err => {
+	if (err) {
+		console.error('❌ Ошибка при подключении к базе данных:', err.message)
+	} else {
+		console.log(`✅ База данных подключена: ${dbPath}`)
+	}
+})
+
+// Создание таблицы пользователей (если её нет)
 db.serialize(() => {
-	// Создаём/расширяем таблицу при первом запуске
-	// Если таблица уже существует без username, можно сделать ALTER TABLE.
 	db.run(`
     CREATE TABLE IF NOT EXISTS users (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -19,9 +34,9 @@ db.serialize(() => {
 })
 
 /**
- * Получить или создать пользователя:
- * @param {string} telegramUserId  - уникальный ID в Telegram
- * @param {string} username        - ник/имя пользователя из Telegram (может быть "")
+ * Получить или создать пользователя
+ * @param {string} telegramUserId - Уникальный ID в Telegram
+ * @param {string} username - Ник/имя пользователя (может быть пустым)
  */
 function getOrCreateUser(telegramUserId, username = '') {
 	return new Promise((resolve, reject) => {
@@ -32,30 +47,26 @@ function getOrCreateUser(telegramUserId, username = '') {
 				if (err) return reject(err)
 
 				if (row) {
-					// Запись уже есть
-					// Обновим username, если он передан и отличается
+					// Если username изменился, обновляем
 					if (username && row.username !== username) {
 						db.run(
 							'UPDATE users SET username = ? WHERE telegram_user_id = ?',
 							[username, telegramUserId],
 							updateErr => {
 								if (updateErr) return reject(updateErr)
-								// Возвращаем обновлённые данные
 								resolve({ balance: row.balance, username })
 							}
 						)
 					} else {
-						// Не меняем username, возвращаем что есть
 						resolve({ balance: row.balance, username: row.username })
 					}
 				} else {
-					// Запись не найдена — создаём
+					// Если пользователя нет, создаём нового
 					db.run(
 						'INSERT INTO users (telegram_user_id, balance, username) VALUES (?, 0, ?)',
 						[telegramUserId, username],
 						function (insertErr) {
 							if (insertErr) return reject(insertErr)
-							// Новая запись: balance=0
 							resolve({ balance: 0, username })
 						}
 					)
@@ -66,7 +77,9 @@ function getOrCreateUser(telegramUserId, username = '') {
 }
 
 /**
- * Обновить баланс существующего пользователя
+ * Обновить баланс пользователя
+ * @param {string} telegramUserId - Уникальный ID в Telegram
+ * @param {number} newBalance - Новый баланс
  */
 function updateBalance(telegramUserId, newBalance) {
 	return new Promise((resolve, reject) => {
@@ -83,7 +96,8 @@ function updateBalance(telegramUserId, newBalance) {
 
 /**
  * Получить топ N игроков (по убыванию баланса)
- * Возвращает массив: [{ telegram_user_id, username, balance }, ...]
+ * @param {number} limit - Количество записей (по умолчанию 100)
+ * @returns {Promise<Array>} - Массив пользователей [{ telegram_user_id, username, balance }, ...]
  */
 function getTopPlayers(limit = 100) {
 	return new Promise((resolve, reject) => {
