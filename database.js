@@ -2,23 +2,14 @@ const sqlite3 = require('sqlite3').verbose()
 const path = require('path')
 const fs = require('fs')
 
-// Путь к базе данных
 const dbPath = '/data/trump_game.db'
 
-// Создаём папку для БД, если она не существует
-const dbDir = path.dirname(dbPath)
-if (!fs.existsSync(dbDir)) {
-	fs.mkdirSync(dbDir, { recursive: true })
-	console.log(`✅ Папка для базы данных создана: ${dbDir}`)
-}
-
-// Проверка и создание базы, если она не существует
+// Проверяем, есть ли база
 if (!fs.existsSync(dbPath)) {
-	console.log('⚠️ База данных не найдена! Создаём пустую базу...')
-	fs.writeFileSync(dbPath, '')
+	console.log('⚠️ База данных не найдена. Создаём новую...')
 }
 
-// Подключение к базе данных
+// Подключаемся к БД
 const db = new sqlite3.Database(dbPath, err => {
 	if (err) {
 		console.error('❌ Ошибка при подключении к БД:', err.message)
@@ -27,7 +18,7 @@ const db = new sqlite3.Database(dbPath, err => {
 	}
 })
 
-// Создаём таблицу, если она не существует
+// Создаём таблицу, если её нет
 db.serialize(() => {
 	db.run(`
         CREATE TABLE IF NOT EXISTS users (
@@ -51,10 +42,20 @@ function getOrCreateUser(telegramUserId, username = 'Аноним') {
 				if (err) return reject(err)
 
 				if (row) {
-					// Если пользователь найден, возвращаем данные
-					resolve({ balance: row.balance, username: row.username })
+					// Обновляем username, если изменился
+					if (username && row.username !== username) {
+						db.run(
+							'UPDATE users SET username = ? WHERE telegram_user_id = ?',
+							[username, telegramUserId],
+							updateErr => {
+								if (updateErr) return reject(updateErr)
+								resolve({ balance: row.balance, username })
+							}
+						)
+					} else {
+						resolve({ balance: row.balance, username: row.username })
+					}
 				} else {
-					// Создаём нового пользователя
 					db.run(
 						'INSERT INTO users (telegram_user_id, balance, username) VALUES (?, 0, ?)',
 						[telegramUserId, username],
@@ -86,7 +87,7 @@ function updateBalance(telegramUserId, newBalance) {
 }
 
 /**
- * Получить топ игроков
+ * Получить топ 100 игроков
  */
 function getTopPlayers(limit = 100) {
 	return new Promise((resolve, reject) => {
