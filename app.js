@@ -2,31 +2,28 @@ const express = require('express')
 const path = require('path')
 const fs = require('fs')
 const bodyParser = require('body-parser')
+const multer = require('multer')
 const { getOrCreateUser, updateBalance, getTopPlayers } = require('./database')
 
 const app = express()
-const PORT = process.env.PORT || 3000
-
-// 🔹 Админский ключ (пока в коде)
+const PORT = process.env.PORT || 8080
 const ADMIN_KEY = 'Lesha_Self1'
+const dbPath = '/data/trump_game.db'
 
-// 🔹 Указываем путь к базе данных (если `DB_PATH` не задан, используем локальный)
-const dbPath =
-	process.env.DB_PATH || path.join(__dirname, 'database', 'trump_game.db')
-
-// Middleware
 app.use(express.static(path.join(__dirname, 'public')))
 app.use(bodyParser.json())
 
+// Настройка загрузки файлов
+const upload = multer({ dest: '/tmp/' })
+
 /**
- * 1️⃣ Получить текущий баланс пользователя
+ * Получить баланс пользователя
  */
 app.post('/api/getBalance', async (req, res) => {
 	try {
 		const { telegramUserId, username } = req.body
-		if (!telegramUserId) {
+		if (!telegramUserId)
 			return res.status(400).json({ error: '⛔ No Telegram user ID provided' })
-		}
 
 		const userData = await getOrCreateUser(telegramUserId, username)
 		res.json({ balance: userData.balance, username: userData.username })
@@ -37,20 +34,17 @@ app.post('/api/getBalance', async (req, res) => {
 })
 
 /**
- * 2️⃣ Инкрементировать баланс пользователя (увеличить на 1)
+ * Инкрементировать баланс
  */
 app.post('/api/incrementBalance', async (req, res) => {
 	try {
-		const { telegramUserId, username } = req.body
-		if (!telegramUserId) {
+		const { telegramUserId } = req.body
+		if (!telegramUserId)
 			return res.status(400).json({ error: '⛔ No Telegram user ID provided' })
-		}
 
-		// Получаем текущий баланс
-		const userData = await getOrCreateUser(telegramUserId, username)
+		const userData = await getOrCreateUser(telegramUserId)
 		const newBalance = userData.balance + 1
 
-		// Обновляем баланс в БД
 		await updateBalance(telegramUserId, newBalance)
 		res.json({ balance: newBalance })
 	} catch (err) {
@@ -60,7 +54,7 @@ app.post('/api/incrementBalance', async (req, res) => {
 })
 
 /**
- * 3️⃣ Получить топ-100 игроков (лидерборд)
+ * Лидерборд (топ 100)
  */
 app.get('/api/leaderboard', async (req, res) => {
 	try {
@@ -73,28 +67,33 @@ app.get('/api/leaderboard', async (req, res) => {
 })
 
 /**
- * 4️⃣ Скачивание базы данных (только для админа)
+ * Скачать базу данных
  */
 app.get('/download-db', (req, res) => {
-	const adminKey = req.query.key || ''
+	if (req.query.key !== ADMIN_KEY)
+		return res.status(403).send('⛔ Доступ запрещён.')
 
-	if (adminKey !== ADMIN_KEY) {
-		return res.status(403).send('⛔ Доступ запрещён. Неверный ключ.')
-	}
+	if (!fs.existsSync(dbPath))
+		return res.status(404).send('❌ База данных не найдена.')
 
-	if (!fs.existsSync(dbPath)) {
-		return res.status(404).send('❌ Файл базы данных не найден.')
-	}
+	res.download(dbPath, 'trump_game.db')
+})
 
-	res.download(dbPath, 'trump_game.db', err => {
-		if (err) {
-			console.error('Ошибка при отправке файла:', err)
-			res.status(500).send('❌ Ошибка при скачивании файла.')
-		}
+/**
+ * Загрузить новую базу
+ */
+app.post('/upload-db', upload.single('database'), (req, res) => {
+	if (req.query.key !== ADMIN_KEY)
+		return res.status(403).send('⛔ Доступ запрещён.')
+
+	if (!req.file) return res.status(400).send('❌ Файл базы не загружен.')
+
+	fs.rename(req.file.path, dbPath, err => {
+		if (err) return res.status(500).send('❌ Ошибка загрузки.')
+		res.send('✅ База успешно обновлена!')
 	})
 })
 
-// Запуск сервера
 app.listen(PORT, () => {
-	console.log(`🚀 Сервер запущен на http://localhost:${PORT}`)
+	console.log(`🚀 Сервер работает на http://localhost:${PORT}`)
 })
