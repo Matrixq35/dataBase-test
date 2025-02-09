@@ -54,8 +54,9 @@ function generateReferralCode() {
  * Если пользователь новый и передан referralCodeInput, то:
  * – если такой реферальный код найден, начисляется бонус (3000 токенов) рефереру,
  * – в новом пользователе сохраняется, кто его пригласил (referred_by).
- * Если пользователь уже существует, но в его записи поле referred_by пустое и передан referralCodeInput,
- * то обновляем запись и начисляем бонус рефереру (однократно).
+ * Если пользователь уже существует, но поле referral_code пустое (например, старый пользователь),
+ * то генерируется новый реферальный код и запись обновляется.
+ * Если пользователь уже существует и referral_code присутствует, бонус не начисляется повторно.
  */
 function getOrCreateUser(telegramUserId, username, referralCodeInput) {
 	return new Promise((resolve, reject) => {
@@ -66,21 +67,37 @@ function getOrCreateUser(telegramUserId, username, referralCodeInput) {
 				if (err) return reject(err)
 
 				if (row) {
-					// Если пользователь уже существует, но не был привязан к рефереру и передан referralCodeInput,
-					// пытаемся обновить данные (однократно)
-					if (!row.referred_by && referralCodeInput) {
+					// Если пользователь уже существует, но referral_code отсутствует, обновляем его
+					if (!row.referral_code) {
+						const newReferralCode = generateReferralCode()
+						db.run(
+							'UPDATE users SET referral_code = ? WHERE telegram_user_id = ?',
+							[newReferralCode, telegramUserId],
+							updateErr => {
+								if (updateErr) {
+									console.error(
+										'Ошибка обновления реферального кода:',
+										updateErr
+									)
+									// Если обновление не удалось, возвращаем старую запись (хотя поле пустое)
+									return resolve(row)
+								}
+								row.referral_code = newReferralCode
+								return resolve(row)
+							}
+						)
+					} else if (!row.referred_by && referralCodeInput) {
+						// Если пользователь существует, но не был привязан к рефереру, и передан referralCodeInput,
+						// пытаемся обновить запись и начислить бонус рефереру (однократно)
 						db.get(
 							'SELECT telegram_user_id FROM users WHERE referral_code = ?',
 							[referralCodeInput],
 							(err2, refRow) => {
 								if (err2) {
 									console.error('Ошибка проверки реферального кода:', err2)
-									// Возвращаем данные без обновления
 									return resolve(row)
 								}
 								if (refRow) {
-									// Обновляем запись пользователя, устанавливая referred_by,
-									// и начисляем бонус рефереру
 									db.run(
 										'UPDATE users SET referred_by = ? WHERE telegram_user_id = ?',
 										[refRow.telegram_user_id, telegramUserId],
@@ -100,7 +117,6 @@ function getOrCreateUser(telegramUserId, username, referralCodeInput) {
 															`✅ Бонус 3000 токенов начислен пользователю ${refRow.telegram_user_id}`
 														)
 													}
-													// Обновляем локальные данные: устанавливаем referred_by для возвращаемого объекта
 													row.referred_by = refRow.telegram_user_id
 													return resolve(row)
 												}
@@ -108,19 +124,17 @@ function getOrCreateUser(telegramUserId, username, referralCodeInput) {
 										}
 									)
 								} else {
-									// Если переданный реферальный код неверный – ничего не меняем
 									return resolve(row)
 								}
 							}
 						)
 					} else {
-						// Пользователь существует и либо уже привязан, либо referralCodeInput не передан
 						return resolve(row)
 					}
 				} else {
-					// Новый пользователь: генерируем реферальный код
+					// Новый пользователь: генерируем новый реферальный код
 					const newReferralCode = generateReferralCode()
-					// Функция создания нового пользователя
+
 					function createUser(referrerValue = null) {
 						db.run(
 							'INSERT INTO users (telegram_user_id, balance, username, referral_code, referred_by) VALUES (?, 0, ?, ?, ?)',
@@ -147,7 +161,6 @@ function getOrCreateUser(telegramUserId, username, referralCodeInput) {
 									createUser()
 								} else {
 									if (refRow) {
-										// Начисляем бонус 3000 токенов рефереру
 										db.run(
 											'UPDATE users SET balance = balance + 3000 WHERE telegram_user_id = ?',
 											[refRow.telegram_user_id],
@@ -162,7 +175,6 @@ function getOrCreateUser(telegramUserId, username, referralCodeInput) {
 														`✅ Бонус 3000 токенов начислен пользователю ${refRow.telegram_user_id}`
 													)
 												}
-												// Создаём пользователя с указанием, кто его пригласил
 												createUser(refRow.telegram_user_id)
 											}
 										)
