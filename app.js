@@ -21,6 +21,13 @@ app.use(bodyParser.json())
 // Настройка загрузки файлов (Multer сохраняет файл во временную папку)
 const upload = multer({ dest: '/tmp/' })
 
+/**
+ * Получить баланс пользователя.
+ * Ожидает в теле запроса:
+ * - telegramUserId (обязательное)
+ * - username (опционально, для создания пользователя)
+ * - referralCode (опционально, если пользователь пришёл по реферальной ссылке)
+ */
 app.post('/api/getBalance', async (req, res) => {
 	try {
 		const { telegramUserId, username, referralCode } = req.body
@@ -35,7 +42,7 @@ app.post('/api/getBalance', async (req, res) => {
 		res.json({
 			balance: userData.balance,
 			username: userData.username,
-			referralCode: userData.referralCode || userData.referral_code, // отдаём значение в camelCase
+			referralCode: userData.referralCode || userData.referral_code,
 			referredBy: userData.referredBy,
 		})
 	} catch (err) {

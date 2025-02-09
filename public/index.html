@@ -3,9 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <title>Trump Tokens Game</title>
-  <!-- Подключаем Telegram WebApp (при необходимости) -->
+  <!-- Подключаем Telegram WebApp -->
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <!-- Адаптивность для мобильных устройств -->
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
   <style>
     html, body {
@@ -139,7 +138,7 @@
   <!-- Экран Рефералов -->
   <div id="referralsScreen" class="screen">
     <h2>Рефералы</h2>
-    <p>Ваша реферальная ссылка (работает только внутри Telegram):</p>
+    <p>Ваша реферальная ссылка (переходите по ней, чтобы приглашать друзей через Telegram):</p>
     <div id="referralLink">Сначала получите баланс, чтобы узнать ваш реферальный код</div>
     <p>Общее количество приглашённых: <span id="totalReferrals">0</span></p>
     <h3>Список рефералов</h3>
@@ -154,7 +153,7 @@
   </nav>
   
   <script>
-    // Инициализация Telegram WebApp (если используется)
+    // Инициализация Telegram WebApp
     const tg = window.Telegram.WebApp;
     tg.ready();
     
@@ -171,6 +170,7 @@
     // Извлекаем реферальный код из URL (параметр start)
     const urlParams = new URLSearchParams(window.location.search);
     const referralCodeFromURL = urlParams.get('start');
+    console.log("Реферальный код из URL:", referralCodeFromURL);
     
     // Получение баланса пользователя. Если в URL есть referralCode, передаём его.
     async function fetchBalance() {
@@ -182,13 +182,14 @@
           body: JSON.stringify({ 
             telegramUserId, 
             username: telegramUsername,
-            referralCode: referralCodeFromURL  // Передаём реферальный код, если он есть
+            referralCode: referralCodeFromURL
           })
         });
         const data = await response.json();
+        console.log("Ответ API /api/getBalance:", data);
         document.getElementById('balanceValue').textContent = data.balance || 0;
         if (data.referralCode) {
-          // Формируем реферальную ссылку для Telegram
+          // Формируем ссылку для перехода в Telegram-бот (deep linking)
           const botUsername = "aDGage_bot"; // Замените на имя вашего бота (без символа @)
           const referralLink = "https://t.me/" + botUsername + "?start=" + data.referralCode;
           document.getElementById('referralLink').textContent = referralLink;
