@@ -21,13 +21,6 @@ app.use(bodyParser.json())
 // Настройка загрузки файлов (Multer сохраняет файл во временную папку)
 const upload = multer({ dest: '/tmp/' })
 
-/**
- * Получить баланс пользователя.
- * Ожидает в теле запроса:
- * - telegramUserId (обязательное)
- * - username (опционально, для создания пользователя)
- * - referralCode (опционально, если пользователь пришёл по реферальной ссылке)
- */
 app.post('/api/getBalance', async (req, res) => {
 	try {
 		const { telegramUserId, username, referralCode } = req.body
@@ -42,7 +35,7 @@ app.post('/api/getBalance', async (req, res) => {
 		res.json({
 			balance: userData.balance,
 			username: userData.username,
-			referralCode: userData.referralCode,
+			referralCode: userData.referralCode || userData.referral_code, // отдаём значение в camelCase
 			referredBy: userData.referredBy,
 		})
 	} catch (err) {
@@ -51,11 +44,6 @@ app.post('/api/getBalance', async (req, res) => {
 	}
 })
 
-/**
- * Инкрементировать баланс пользователя.
- * Тело запроса должно содержать:
- * - telegramUserId (обязательное)
- */
 app.post('/api/incrementBalance', async (req, res) => {
 	try {
 		const { telegramUserId } = req.body
@@ -72,9 +60,6 @@ app.post('/api/incrementBalance', async (req, res) => {
 	}
 })
 
-/**
- * Получить лидерборд (топ 100 игроков).
- */
 app.get('/api/leaderboard', async (req, res) => {
 	try {
 		const topPlayers = await getTopPlayers(100)
@@ -85,11 +70,6 @@ app.get('/api/leaderboard', async (req, res) => {
 	}
 })
 
-/**
- * Получить данные по рефералам для заданного пользователя.
- * Ожидается query-параметр: telegramUserId.
- * Возвращает: общее количество приглашённых и список рефералов (telegram_user_id, username, balance)
- */
 app.get('/api/referrals', async (req, res) => {
 	try {
 		const { telegramUserId } = req.query
@@ -104,10 +84,6 @@ app.get('/api/referrals', async (req, res) => {
 	}
 })
 
-/**
- * Скачать базу данных.
- * Требуется query-параметр: ?key=Lesha_Self1
- */
 app.get('/download-db', (req, res) => {
 	if (req.query.key !== ADMIN_KEY) {
 		return res.status(403).send('⛔ Доступ запрещён.')
@@ -118,11 +94,6 @@ app.get('/download-db', (req, res) => {
 	res.download(dbPath, 'trump_game.db')
 })
 
-/**
- * Загрузить новую базу данных.
- * Требуется query-параметр: ?key=Lesha_Self1.
- * Файл базы передаётся в поле "database" (multipart/form-data)
- */
 app.post('/upload-db', upload.single('database'), (req, res) => {
 	if (req.query.key !== ADMIN_KEY) {
 		return res.status(403).send('⛔ Доступ запрещён.')

@@ -67,7 +67,8 @@ function getOrCreateUser(telegramUserId, username, referralCodeInput) {
 				if (err) return reject(err)
 
 				if (row) {
-					// Если пользователь уже существует, но referral_code отсутствует, обновляем его
+					console.log('Получена запись из БД для пользователя:', row)
+					// Если пользователь существует, но у него не установлен referral_code, обновляем его
 					if (!row.referral_code) {
 						const newReferralCode = generateReferralCode()
 						db.run(
@@ -79,16 +80,19 @@ function getOrCreateUser(telegramUserId, username, referralCodeInput) {
 										'Ошибка обновления реферального кода:',
 										updateErr
 									)
-									// Если обновление не удалось, возвращаем старую запись (хотя поле пустое)
-									return resolve(row)
+									return resolve(row) // вернём старую запись, даже если обновление не прошло
 								}
 								row.referral_code = newReferralCode
+								console.log(
+									'Обновлён реферальный код для существующего пользователя:',
+									row
+								)
 								return resolve(row)
 							}
 						)
-					} else if (!row.referred_by && referralCodeInput) {
-						// Если пользователь существует, но не был привязан к рефереру, и передан referralCodeInput,
-						// пытаемся обновить запись и начислить бонус рефереру (однократно)
+					}
+					// Если пользователь существует, но не был привязан к рефереру и передан referralCodeInput, обновляем его
+					else if (!row.referred_by && referralCodeInput) {
 						db.get(
 							'SELECT telegram_user_id FROM users WHERE referral_code = ?',
 							[referralCodeInput],
@@ -134,23 +138,24 @@ function getOrCreateUser(telegramUserId, username, referralCodeInput) {
 				} else {
 					// Новый пользователь: генерируем новый реферальный код
 					const newReferralCode = generateReferralCode()
-
 					function createUser(referrerValue = null) {
 						db.run(
 							'INSERT INTO users (telegram_user_id, balance, username, referral_code, referred_by) VALUES (?, 0, ?, ?, ?)',
 							[telegramUserId, username, newReferralCode, referrerValue],
 							function (insertErr) {
 								if (insertErr) return reject(insertErr)
-								resolve({
+								const newUser = {
 									balance: 0,
 									username: username,
-									referralCode: newReferralCode,
+									referral_code: newReferralCode,
+									referralCode: newReferralCode, // для единообразия возвращаем camelCase
 									referredBy: referrerValue,
-								})
+								}
+								console.log('Создан новый пользователь:', newUser)
+								resolve(newUser)
 							}
 						)
 					}
-
 					if (referralCodeInput) {
 						db.get(
 							'SELECT telegram_user_id FROM users WHERE referral_code = ?',
