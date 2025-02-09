@@ -18,15 +18,26 @@ const upload = multer({ dest: '/tmp/' })
 
 /**
  * Получить баланс пользователя
+ * Принимает: telegramUserId, username, referralCode (опционально)
  */
 app.post('/api/getBalance', async (req, res) => {
 	try {
-		const { telegramUserId, username } = req.body
+		const { telegramUserId, username, referralCode } = req.body
 		if (!telegramUserId)
 			return res.status(400).json({ error: '⛔ No Telegram user ID provided' })
 
-		const userData = await getOrCreateUser(telegramUserId, username)
-		res.json({ balance: userData.balance, username: userData.username })
+		// Передаём referralCode в функцию getOrCreateUser. Если пользователь уже существует, это поле игнорируется.
+		const userData = await getOrCreateUser(
+			telegramUserId,
+			username,
+			referralCode
+		)
+		res.json({
+			balance: userData.balance,
+			username: userData.username,
+			myReferralCode: userData.referralCode, // код, которым пользователь может делиться
+			referredBy: userData.referredBy, // если пользователь был приглашён, тут будет telegram_user_id реферера
+		})
 	} catch (err) {
 		console.error('Ошибка в /api/getBalance:', err)
 		res.status(500).json({ error: '❌ Internal Server Error' })
