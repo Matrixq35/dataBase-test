@@ -3,12 +3,16 @@ const path = require('path')
 const fs = require('fs')
 const bodyParser = require('body-parser')
 const multer = require('multer')
-const { getOrCreateUser, updateBalance, getTopPlayers } = require('./database')
+const {
+	getOrCreateUser,
+	updateBalance,
+	getTopPlayers,
+	getReferrals,
+} = require('./database')
 
 const app = express()
 const PORT = process.env.PORT || 8080
 const ADMIN_KEY = 'Lesha_Self1'
-// Путь к базе данных — убедитесь, что папка /data смонтирована как persistent volume на Railway
 const dbPath = '/data/trump_game.db'
 
 app.use(express.static(path.join(__dirname, 'public')))
@@ -20,18 +24,28 @@ const upload = multer({ dest: '/tmp/' })
 /**
  * Получить баланс пользователя
  * Тело запроса должно содержать:
- * - telegramUserId (обязательное поле)
+ * - telegramUserId (обязательное)
  * - username (опционально, для создания нового пользователя)
+ * - referralCode (опционально, если пользователь пришёл по реферальной ссылке)
  */
 app.post('/api/getBalance', async (req, res) => {
 	try {
-		const { telegramUserId, username } = req.body
+		const { telegramUserId, username, referralCode } = req.body
 		if (!telegramUserId) {
 			return res.status(400).json({ error: '⛔ No Telegram user ID provided' })
 		}
 
-		const userData = await getOrCreateUser(telegramUserId, username)
-		res.json({ balance: userData.balance, username: userData.username })
+		const userData = await getOrCreateUser(
+			telegramUserId,
+			username,
+			referralCode
+		)
+		res.json({
+			balance: userData.balance,
+			username: userData.username,
+			myReferralCode: userData.referralCode,
+			referredBy: userData.referredBy,
+		})
 	} catch (err) {
 		console.error('Ошибка в /api/getBalance:', err)
 		res.status(500).json({ error: '❌ Internal Server Error' })
@@ -41,7 +55,7 @@ app.post('/api/getBalance', async (req, res) => {
 /**
  * Инкрементировать баланс пользователя
  * Тело запроса должно содержать:
- * - telegramUserId (обязательное поле)
+ * - telegramUserId (обязательное)
  */
 app.post('/api/incrementBalance', async (req, res) => {
 	try {
@@ -70,6 +84,25 @@ app.get('/api/leaderboard', async (req, res) => {
 		res.json(topPlayers)
 	} catch (err) {
 		console.error('Ошибка в /api/leaderboard:', err)
+		res.status(500).json({ error: '❌ Internal Server Error' })
+	}
+})
+
+/**
+ * Получить данные по рефералам
+ * Требуется query-параметр: telegramUserId
+ * Возвращает общее количество приглашённых рефералов и список с данными (telegram_user_id, username, balance)
+ */
+app.get('/api/referrals', async (req, res) => {
+	try {
+		const { telegramUserId } = req.query
+		if (!telegramUserId) {
+			return res.status(400).json({ error: '⛔ No Telegram user ID provided' })
+		}
+		const referrals = await getReferrals(telegramUserId)
+		res.json({ totalReferrals: referrals.length, referrals })
+	} catch (err) {
+		console.error('Ошибка в /api/referrals:', err)
 		res.status(500).json({ error: '❌ Internal Server Error' })
 	}
 })
@@ -106,7 +139,7 @@ app.post('/upload-db', upload.single('database'), (req, res) => {
 
 	console.log('Получен файл:', req.file)
 
-	// Пытаемся переместить файл с помощью fs.rename
+	// Пытаемся переместить файл через fs.rename
 	fs.rename(req.file.path, dbPath, err => {
 		if (err) {
 			console.error('Ошибка при перемещении файла через fs.rename:', err)
