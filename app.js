@@ -13,17 +13,21 @@ const dbPath = '/data/trump_game.db'
 app.use(express.static(path.join(__dirname, 'public')))
 app.use(bodyParser.json())
 
-// Настройка загрузки файлов
+// Настройка загрузки файлов (Multer сохраняет файл во временную папку)
 const upload = multer({ dest: '/tmp/' })
 
 /**
  * Получить баланс пользователя
+ * Ожидает в теле запроса:
+ * - telegramUserId (обязательное поле)
+ * - username (опционально, для создания нового пользователя)
  */
 app.post('/api/getBalance', async (req, res) => {
 	try {
 		const { telegramUserId, username } = req.body
-		if (!telegramUserId)
+		if (!telegramUserId) {
 			return res.status(400).json({ error: '⛔ No Telegram user ID provided' })
+		}
 
 		const userData = await getOrCreateUser(telegramUserId, username)
 		res.json({ balance: userData.balance, username: userData.username })
@@ -34,13 +38,16 @@ app.post('/api/getBalance', async (req, res) => {
 })
 
 /**
- * Инкрементировать баланс
+ * Инкрементировать баланс пользователя
+ * Ожидает в теле запроса:
+ * - telegramUserId (обязательное поле)
  */
 app.post('/api/incrementBalance', async (req, res) => {
 	try {
 		const { telegramUserId } = req.body
-		if (!telegramUserId)
+		if (!telegramUserId) {
 			return res.status(400).json({ error: '⛔ No Telegram user ID provided' })
+		}
 
 		const userData = await getOrCreateUser(telegramUserId)
 		const newBalance = userData.balance + 1
@@ -54,7 +61,7 @@ app.post('/api/incrementBalance', async (req, res) => {
 })
 
 /**
- * Лидерборд (топ 100)
+ * Получить лидерборд (топ 100)
  */
 app.get('/api/leaderboard', async (req, res) => {
 	try {
@@ -68,32 +75,44 @@ app.get('/api/leaderboard', async (req, res) => {
 
 /**
  * Скачать базу данных
+ * Требуется передать ключ в query-параметре: ?key=Lesha_Self1
  */
 app.get('/download-db', (req, res) => {
-	if (req.query.key !== ADMIN_KEY)
+	if (req.query.key !== ADMIN_KEY) {
 		return res.status(403).send('⛔ Доступ запрещён.')
+	}
 
-	if (!fs.existsSync(dbPath))
+	if (!fs.existsSync(dbPath)) {
 		return res.status(404).send('❌ База данных не найдена.')
+	}
 
 	res.download(dbPath, 'trump_game.db')
 })
 
 /**
- * Загрузить новую базу
+ * Загрузить новую базу данных
+ * Требуется передать ключ в query-параметре: ?key=Lesha_Self1
+ * Файл базы должен передаваться в теле запроса в поле "database"
  */
 app.post('/upload-db', upload.single('database'), (req, res) => {
-	if (req.query.key !== ADMIN_KEY)
+	if (req.query.key !== ADMIN_KEY) {
 		return res.status(403).send('⛔ Доступ запрещён.')
+	}
 
-	if (!req.file) return res.status(400).send('❌ Файл базы не загружен.')
+	if (!req.file) {
+		return res.status(400).send('❌ Файл базы не загружен.')
+	}
 
+	// Перемещаем загруженный файл во временной папке в постоянное хранилище
 	fs.rename(req.file.path, dbPath, err => {
-		if (err) return res.status(500).send('❌ Ошибка загрузки.')
+		if (err) {
+			console.error('Ошибка при перемещении файла:', err)
+			return res.status(500).send('❌ Ошибка загрузки.')
+		}
 		res.send('✅ База успешно обновлена!')
 	})
 })
 
 app.listen(PORT, () => {
-	console.log(🚀 Сервер работает на http://localhost:${PORT})
+	console.log(`🚀 Сервер работает на http://localhost:${PORT}`)
 })
