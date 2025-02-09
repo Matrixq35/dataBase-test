@@ -22,7 +22,7 @@ app.use(bodyParser.json())
 const upload = multer({ dest: '/tmp/' })
 
 /**
- * Получить баланс пользователя
+ * Получить баланс пользователя.
  * Ожидает в теле запроса:
  * - telegramUserId (обязательное)
  * - username (опционально, для создания пользователя)
@@ -52,7 +52,7 @@ app.post('/api/getBalance', async (req, res) => {
 })
 
 /**
- * Инкрементировать баланс пользователя
+ * Инкрементировать баланс пользователя.
  * Тело запроса должно содержать:
  * - telegramUserId (обязательное)
  */
@@ -73,7 +73,7 @@ app.post('/api/incrementBalance', async (req, res) => {
 })
 
 /**
- * Получить лидерборд (топ 100 игроков)
+ * Получить лидерборд (топ 100 игроков).
  */
 app.get('/api/leaderboard', async (req, res) => {
 	try {
@@ -88,7 +88,7 @@ app.get('/api/leaderboard', async (req, res) => {
 /**
  * Получить данные по рефералам для заданного пользователя.
  * Ожидается query-параметр: telegramUserId
- * Возвращает общее количество приглашённых и список рефералов (telegram_user_id, username, balance)
+ * Возвращает: общее количество приглашённых и список рефералов (telegram_user_id, username, balance)
  */
 app.get('/api/referrals', async (req, res) => {
 	try {
@@ -105,7 +105,7 @@ app.get('/api/referrals', async (req, res) => {
 })
 
 /**
- * Скачать базу данных
+ * Скачать базу данных.
  * Требуется query-параметр: ?key=Lesha_Self1
  */
 app.get('/download-db', (req, res) => {
@@ -119,7 +119,7 @@ app.get('/download-db', (req, res) => {
 })
 
 /**
- * Загрузить новую базу данных
+ * Загрузить новую базу данных.
  * Требуется query-параметр: ?key=Lesha_Self1
  * Файл базы передаётся в поле "database" (multipart/form-data)
  */
@@ -131,11 +131,9 @@ app.post('/upload-db', upload.single('database'), (req, res) => {
 		return res.status(400).send('❌ Файл базы не загружен.')
 	}
 	console.log('Получен файл:', req.file)
-	// Пытаемся переместить файл через fs.rename
 	fs.rename(req.file.path, dbPath, err => {
 		if (err) {
 			console.error('Ошибка при перемещении файла через fs.rename:', err)
-			// Если fs.rename не проходит (например, ошибка EXDEV), копируем файл
 			fs.copyFile(req.file.path, dbPath, errCopy => {
 				if (errCopy) {
 					console.error(

@@ -54,6 +54,7 @@ function generateReferralCode() {
  * Если пользователь новый и передан referralCodeInput, то:
  * – если такой реферальный код найден, начисляется бонус (3000 токенов) рефереру,
  * – в новом пользователе сохраняется, кто его пригласил (referred_by).
+ * Если пользователь уже существует, бонус не начисляется повторно.
  */
 function getOrCreateUser(telegramUserId, username, referralCodeInput) {
 	return new Promise((resolve, reject) => {
@@ -64,7 +65,7 @@ function getOrCreateUser(telegramUserId, username, referralCodeInput) {
 				if (err) return reject(err)
 
 				if (row) {
-					// Пользователь уже существует – возвращаем его данные
+					// Пользователь уже существует – возвращаем его данные (реферальный бонус начисляется только при регистрации)
 					resolve({
 						balance: row.balance,
 						username: row.username,
