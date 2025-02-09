@@ -87,7 +87,7 @@ app.get('/api/leaderboard', async (req, res) => {
 
 /**
  * Получить данные по рефералам для заданного пользователя.
- * Ожидается query-параметр: telegramUserId
+ * Ожидается query-параметр: telegramUserId.
  * Возвращает: общее количество приглашённых и список рефералов (telegram_user_id, username, balance)
  */
 app.get('/api/referrals', async (req, res) => {
@@ -120,7 +120,7 @@ app.get('/download-db', (req, res) => {
 
 /**
  * Загрузить новую базу данных.
- * Требуется query-параметр: ?key=Lesha_Self1
+ * Требуется query-параметр: ?key=Lesha_Self1.
  * Файл базы передаётся в поле "database" (multipart/form-data)
  */
 app.post('/upload-db', upload.single('database'), (req, res) => {

@@ -54,7 +54,8 @@ function generateReferralCode() {
  * Если пользователь новый и передан referralCodeInput, то:
  * – если такой реферальный код найден, начисляется бонус (3000 токенов) рефереру,
  * – в новом пользователе сохраняется, кто его пригласил (referred_by).
- * Если пользователь уже существует, бонус не начисляется повторно.
+ * Если пользователь уже существует, но в его записи поле referred_by пустое и передан referralCodeInput,
+ * то обновляем запись и начисляем бонус рефереру (однократно).
  */
 function getOrCreateUser(telegramUserId, username, referralCodeInput) {
 	return new Promise((resolve, reject) => {
@@ -65,18 +66,61 @@ function getOrCreateUser(telegramUserId, username, referralCodeInput) {
 				if (err) return reject(err)
 
 				if (row) {
-					// Пользователь уже существует – возвращаем его данные (реферальный бонус начисляется только при регистрации)
-					resolve({
-						balance: row.balance,
-						username: row.username,
-						referralCode: row.referral_code,
-						referredBy: row.referred_by,
-					})
+					// Если пользователь уже существует, но не был привязан к рефереру и передан referralCodeInput,
+					// пытаемся обновить данные (однократно)
+					if (!row.referred_by && referralCodeInput) {
+						db.get(
+							'SELECT telegram_user_id FROM users WHERE referral_code = ?',
+							[referralCodeInput],
+							(err2, refRow) => {
+								if (err2) {
+									console.error('Ошибка проверки реферального кода:', err2)
+									// Возвращаем данные без обновления
+									return resolve(row)
+								}
+								if (refRow) {
+									// Обновляем запись пользователя, устанавливая referred_by,
+									// и начисляем бонус рефереру
+									db.run(
+										'UPDATE users SET referred_by = ? WHERE telegram_user_id = ?',
+										[refRow.telegram_user_id, telegramUserId],
+										err3 => {
+											if (err3) {
+												console.error('Ошибка обновления referred_by:', err3)
+												return resolve(row)
+											}
+											db.run(
+												'UPDATE users SET balance = balance + 3000 WHERE telegram_user_id = ?',
+												[refRow.telegram_user_id],
+												err4 => {
+													if (err4) {
+														console.error('Ошибка начисления бонуса:', err4)
+													} else {
+														console.log(
+															`✅ Бонус 3000 токенов начислен пользователю ${refRow.telegram_user_id}`
+														)
+													}
+													// Обновляем локальные данные: устанавливаем referred_by для возвращаемого объекта
+													row.referred_by = refRow.telegram_user_id
+													return resolve(row)
+												}
+											)
+										}
+									)
+								} else {
+									// Если переданный реферальный код неверный – ничего не меняем
+									return resolve(row)
+								}
+							}
+						)
+					} else {
+						// Пользователь существует и либо уже привязан, либо referralCodeInput не передан
+						return resolve(row)
+					}
 				} else {
-					// Генерируем уникальный реферальный код для нового пользователя
+					// Новый пользователь: генерируем реферальный код
 					const newReferralCode = generateReferralCode()
-
-					// Функция для создания нового пользователя
+					// Функция создания нового пользователя
 					function createUser(referrerValue = null) {
 						db.run(
 							'INSERT INTO users (telegram_user_id, balance, username, referral_code, referred_by) VALUES (?, 0, ?, ?, ?)',
@@ -93,7 +137,6 @@ function getOrCreateUser(telegramUserId, username, referralCodeInput) {
 						)
 					}
 
-					// Если передан реферальный код, проверяем его
 					if (referralCodeInput) {
 						db.get(
 							'SELECT telegram_user_id FROM users WHERE referral_code = ?',
@@ -139,7 +182,7 @@ function getOrCreateUser(telegramUserId, username, referralCodeInput) {
 }
 
 /**
- * Обновить баланс пользователя
+ * Обновить баланс пользователя.
  */
 function updateBalance(telegramUserId, newBalance) {
 	return new Promise((resolve, reject) => {
@@ -155,7 +198,7 @@ function updateBalance(telegramUserId, newBalance) {
 }
 
 /**
- * Получить топ игроков (по убыванию баланса)
+ * Получить топ игроков (по убыванию баланса).
  */
 function getTopPlayers(limit = 100) {
 	return new Promise((resolve, reject) => {

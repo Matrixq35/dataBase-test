@@ -139,7 +139,7 @@
   <!-- Экран Рефералов -->
   <div id="referralsScreen" class="screen">
     <h2>Рефералы</h2>
-    <p>Ваша реферальная ссылка:</p>
+    <p>Ваша реферальная ссылка (работает только внутри Telegram):</p>
     <div id="referralLink">Сначала получите баланс, чтобы узнать ваш реферальный код</div>
     <p>Общее количество приглашённых: <span id="totalReferrals">0</span></p>
     <h3>Список рефералов</h3>
@@ -189,7 +189,7 @@
         document.getElementById('balanceValue').textContent = data.balance || 0;
         if (data.referralCode) {
           // Формируем реферальную ссылку для Telegram
-          const botUsername = "aDGage_bot"; // Замените на имя вашего бота (без символа @)
+          const botUsername = "YourBotUsername"; // Замените на имя вашего бота (без символа @)
           const referralLink = "https://t.me/" + botUsername + "?start=" + data.referralCode;
           document.getElementById('referralLink').textContent = referralLink;
         } else {
