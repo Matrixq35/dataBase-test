@@ -8,6 +8,7 @@ const { getOrCreateUser, updateBalance, getTopPlayers } = require('./database')
 const app = express()
 const PORT = process.env.PORT || 8080
 const ADMIN_KEY = 'Lesha_Self1'
+// Путь к базе данных — убедитесь, что папка /data смонтирована как persistent volume на Railway
 const dbPath = '/data/trump_game.db'
 
 app.use(express.static(path.join(__dirname, 'public')))
@@ -18,7 +19,7 @@ const upload = multer({ dest: '/tmp/' })
 
 /**
  * Получить баланс пользователя
- * Ожидает в теле запроса:
+ * Тело запроса должно содержать:
  * - telegramUserId (обязательное поле)
  * - username (опционально, для создания нового пользователя)
  */
@@ -39,7 +40,7 @@ app.post('/api/getBalance', async (req, res) => {
 
 /**
  * Инкрементировать баланс пользователя
- * Ожидает в теле запроса:
+ * Тело запроса должно содержать:
  * - telegramUserId (обязательное поле)
  */
 app.post('/api/incrementBalance', async (req, res) => {
@@ -92,7 +93,7 @@ app.get('/download-db', (req, res) => {
 /**
  * Загрузить новую базу данных
  * Требуется передать ключ в query-параметре: ?key=Lesha_Self1
- * Файл базы должен передаваться в теле запроса в поле "database"
+ * Файл базы должен передаваться в теле запроса в поле "database" (multipart/form-data)
  */
 app.post('/upload-db', upload.single('database'), (req, res) => {
 	if (req.query.key !== ADMIN_KEY) {
@@ -103,13 +104,32 @@ app.post('/upload-db', upload.single('database'), (req, res) => {
 		return res.status(400).send('❌ Файл базы не загружен.')
 	}
 
-	// Перемещаем загруженный файл во временной папке в постоянное хранилище
+	console.log('Получен файл:', req.file)
+
+	// Пытаемся переместить файл с помощью fs.rename
 	fs.rename(req.file.path, dbPath, err => {
 		if (err) {
-			console.error('Ошибка при перемещении файла:', err)
-			return res.status(500).send('❌ Ошибка загрузки.')
+			console.error('Ошибка при перемещении файла через fs.rename:', err)
+			// Если fs.rename не проходит (например, ошибка EXDEV), копируем файл
+			fs.copyFile(req.file.path, dbPath, errCopy => {
+				if (errCopy) {
+					console.error(
+						'Ошибка при копировании файла через fs.copyFile:',
+						errCopy
+					)
+					return res.status(500).send('❌ Ошибка загрузки: ' + errCopy.message)
+				}
+				// После успешного копирования удаляем временный файл
+				fs.unlink(req.file.path, unlinkErr => {
+					if (unlinkErr) {
+						console.error('Ошибка удаления временного файла:', unlinkErr)
+					}
+					return res.send('✅ База успешно обновлена!')
+				})
+			})
+		} else {
+			res.send('✅ База успешно обновлена!')
 		}
-		res.send('✅ База успешно обновлена!')
 	})
 })
 
