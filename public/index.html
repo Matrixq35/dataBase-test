@@ -3,39 +3,29 @@
 <head>
   <meta charset="UTF-8" />
   <title>Trump Tokens Game</title>
-
   <!-- Подключаем Telegram WebApp (при необходимости) -->
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
-
   <!-- Адаптивность для мобильных устройств -->
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-
   <style>
-    /* Общие стили для приложения */
     html, body {
       margin: 0;
       padding: 0;
       width: 100%;
       height: 100%;
-      background-color: #000;  /* Чёрный фон */
-      color: #d3d3d3;          /* Светло-серый текст */
+      background-color: #000;
+      color: #d3d3d3;
       font-family: sans-serif;
-      overflow: hidden; /* Запрещаем прокрутку */
+      overflow: hidden;
     }
-
-    /* Отключение свайпов */
     body {
-      touch-action: none; /* Отключение свайпов и других жестов */
-
-    body {
+      touch-action: none;
       display: flex;
       flex-direction: column;
       justify-content: flex-start;
       align-items: center;
-      padding-bottom: 60px; /* Отступ для нижней навигации */
+      padding-bottom: 60px;
     }
-
-    /* Контейнеры экранов */
     .screen {
       width: 100%;
       flex: 1;
@@ -47,8 +37,6 @@
     .screen.active {
       display: block;
     }
-
-    /* Секция игры */
     .balance-container {
       display: flex;
       justify-content: center;
@@ -60,37 +48,17 @@
       height: 40px;
       margin-right: 10px;
     }
-    .coin {
-      width: 120px;
-      height: 120px;
-      cursor: pointer;
-      transition: transform 0.2s ease;
-    }
-    .coin:hover {
-      transform: scale(1.1);
-    }
     .balance-text {
       font-size: 2em;
       font-weight: bold;
     }
-
-    /* Секция лидерборда */
-    #leaderboardList {
-      width: 95%;
-      max-width: 800px;
-      margin: 20px auto;
-      padding: 0;
-      list-style: none;
-    }
     #leaderboardList li {
-      background: #222;              /* Темно-серый фон для каждого пункта */
+      background: #222;
       padding: 15px;
       margin: 10px 0;
       border-radius: 8px;
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+      box-shadow: 0 2px 4px rgba(0,0,0,0.5);
     }
-
-    /* Нижняя панель навигации */
     .bottom-nav {
       position: fixed;
       bottom: 0;
@@ -116,77 +84,80 @@
       background: #333;
       border-radius: 9px;
     }
-
-    /* Контейнер для монеты: центрируем содержимое по горизонтали и, при необходимости, по вертикали */
-.coin-container {
-  display: flex;
-  justify-content: center; /* Центрирование по горизонтали */
-  align-items: center;     /* Центрирование по вертикали */
-  /* Если требуется, чтобы монета была посередине экрана по вертикали, можно задать минимальную высоту.
-     Например, если убрать лишние отступы, можно использовать: */
-  /* min-height: 50vh; */
-}
-
-/* Стили для монеты (кнопки) */
-.coin {
-  width: 120px;
-  height: 120px;
-  cursor: pointer;
-  transition: transform 0.2s ease;
-  /* Если не используется контейнер с flex, можно было бы сделать так: */
-  /* display: block;
-     margin: 20px auto; */
-}
-
-.coin:hover {
-  transform: scale(1.1);
-}
-
+    .coin-container {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    .coin {
+      width: 120px;
+      height: 120px;
+      cursor: pointer;
+      transition: transform 0.2s ease;
+    }
+    .coin:hover {
+      transform: scale(1.1);
+    }
+    /* Стили для экрана Рефералов */
+    #referralLink {
+      background: #111;
+      padding: 10px;
+      border: 1px solid #444;
+      word-wrap: break-word;
+    }
+    #referralsList {
+      list-style: none;
+      padding: 0;
+    }
+    #referralsList li {
+      background: #222;
+      padding: 10px;
+      margin: 5px 0;
+      border-radius: 5px;
+    }
   </style>
 </head>
 <body>
   <!-- Экран игры -->
- <!-- Экран игры -->
-<div id="gameScreen" class="screen active">
-  <h1>Trump Tokens Game</h1>
-  <div class="balance-container">
-    <img 
-      src="https://cdn.britannica.com/68/216668-050-DD3A9D0A/United-States-President-Donald-Trump-2017.jpg" 
-      alt="Trump Token" 
-    />
-    <div class="balance-text" id="balanceValue">0</div>
+  <div id="gameScreen" class="screen active">
+    <h1>Trump Tokens Game</h1>
+    <div class="balance-container">
+      <img src="https://cdn.britannica.com/68/216668-050-DD3A9D0A/United-States-President-Donald-Trump-2017.jpg" alt="Trump Token">
+      <div class="balance-text" id="balanceValue">0</div>
+    </div>
+    <div class="coin-container">
+      <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSGWCmKSa1j8vExENbzjn5B_2SYWvK6O85_ew&s" alt="Trump Coin" class="coin" id="trumpCoin">
+    </div>
   </div>
   
-  <!-- Контейнер для кнопки (монеты) -->
-  <div class="coin-container">
-    <img
-      src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSGWCmKSa1j8vExENbzjn5B_2SYWvK6O85_ew&s"
-      alt="Trump Coin"
-      class="coin"
-      id="trumpCoin"
-    />
-  </div>
-</div>
-
-
   <!-- Экран Лидерборда -->
   <div id="leaderboardScreen" class="screen">
     <h2>Топ 100 игроков</h2>
-    <!-- Каждый пункт занимает почти всю ширину экрана -->
     <ul id="leaderboardList"></ul>
   </div>
-
+  
+  <!-- Экран Рефералов -->
+  <div id="referralsScreen" class="screen">
+    <h2>Рефералы</h2>
+    <p>Ваша реферальная ссылка (скопируйте для приглашения друзей):</p>
+    <div id="referralLink">Сначала получите баланс, чтобы узнать ваш реферальный код</div>
+    <p>Общее количество приглашённых: <span id="totalReferrals">0</span></p>
+    <h3>Список рефералов</h3>
+    <ul id="referralsList"></ul>
+  </div>
+  
   <!-- Нижняя навигация -->
   <nav class="bottom-nav">
     <button id="btnGame" class="active">Игра</button>
     <button id="btnLeaderboard">Лидерборд</button>
+    <button id="btnReferrals">Рефералы</button>
   </nav>
-
+  
   <script>
-    // Инициализация Telegram WebApp (если требуется)
+    // Инициализация Telegram WebApp (если используется)
     const tg = window.Telegram.WebApp;
     tg.ready();
-
+    
     let telegramUserId = tg.initDataUnsafe?.user?.id || null;
     let telegramUsername = tg.initDataUnsafe?.user?.username || "";
     if (telegramUserId) {
@@ -194,91 +165,124 @@
     } else {
       alert("Приложение запущено вне Telegram (user.id не получен)!");
     }
-
-    // URL нашего сервера
+    
     const apiURL = window.location.origin;
-
-    // При загрузке экрана запрашиваем баланс пользователя
-    fetchBalance();
+    
+    // Получение баланса пользователя
     async function fetchBalance() {
       if (!telegramUserId) return;
       try {
         const response = await fetch(`${apiURL}/api/getBalance`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            telegramUserId,
-            username: telegramUsername
-          })
+          body: JSON.stringify({ telegramUserId, username: telegramUsername })
         });
         const data = await response.json();
-        document.getElementById('balanceValue').textContent = data.balance ?? 0;
+        document.getElementById('balanceValue').textContent = data.balance || 0;
+        if (data.referralCode) {
+          const referralLink = window.location.origin + '/?ref=' + data.referralCode;
+          document.getElementById('referralLink').textContent = referralLink;
+        }
       } catch (err) {
         console.error('Ошибка при получении баланса:', err);
       }
     }
-
+    
     async function incrementBalance() {
       if (!telegramUserId) return;
       try {
         const response = await fetch(`${apiURL}/api/incrementBalance`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            telegramUserId,
-            username: telegramUsername
-          })
+          body: JSON.stringify({ telegramUserId, username: telegramUsername })
         });
         const data = await response.json();
-        document.getElementById('balanceValue').textContent = data.balance ?? 0;
+        document.getElementById('balanceValue').textContent = data.balance || 0;
       } catch (err) {
         console.error('Ошибка при инкременте баланса:', err);
       }
     }
-
+    
     document.getElementById('trumpCoin').addEventListener('click', incrementBalance);
-
-    // Загрузка и отображение лидерборда
+    
     async function loadLeaderboard() {
       try {
         const response = await fetch(`${apiURL}/api/leaderboard`);
         const players = await response.json();
         const listEl = document.getElementById('leaderboardList');
         listEl.innerHTML = '';
-
         players.forEach((player, index) => {
           const li = document.createElement('li');
           const name = player.username || player.telegram_user_id;
-          li.textContent = `#${index + 1} ${name}  ${player.balance} TRUMPIS`;
+          li.textContent = `#${index + 1} ${name} - ${player.balance} TRUMPIS`;
           listEl.appendChild(li);
         });
       } catch (err) {
         console.error('Ошибка при загрузке Лидерборда:', err);
       }
     }
-
-    // Переключение экранов
+    
+    async function loadReferrals() {
+      try {
+        const response = await fetch(`${apiURL}/api/referrals?telegramUserId=${encodeURIComponent(telegramUserId)}`);
+        const data = await response.json();
+        document.getElementById('totalReferrals').textContent = data.totalReferrals;
+        const referralsList = document.getElementById('referralsList');
+        referralsList.innerHTML = '';
+        if (data.referrals && data.referrals.length > 0) {
+          data.referrals.forEach(ref => {
+            const li = document.createElement('li');
+            li.textContent = `${ref.telegram_user_id} (${ref.username || ''}) - ${ref.balance} TRUMPIS`;
+            referralsList.appendChild(li);
+          });
+        } else {
+          referralsList.innerHTML = '<li>Нет приглашённых рефералов</li>';
+        }
+      } catch (err) {
+        console.error('Ошибка при загрузке рефералов:', err);
+      }
+    }
+    
     const gameScreen = document.getElementById('gameScreen');
     const leaderboardScreen = document.getElementById('leaderboardScreen');
+    const referralsScreen = document.getElementById('referralsScreen');
+    
     const btnGame = document.getElementById('btnGame');
     const btnLeaderboard = document.getElementById('btnLeaderboard');
-
-    function showGameScreen() {
-      gameScreen.classList.add('active');
-      leaderboardScreen.classList.remove('active');
-      btnGame.classList.add('active');
-      btnLeaderboard.classList.remove('active');
-    }
-    function showLeaderboardScreen() {
-      loadLeaderboard();
-      leaderboardScreen.classList.add('active');
+    const btnReferrals = document.getElementById('btnReferrals');
+    
+    function showScreen(screenToShow) {
       gameScreen.classList.remove('active');
-      btnLeaderboard.classList.add('active');
-      btnGame.classList.remove('active');
+      leaderboardScreen.classList.remove('active');
+      referralsScreen.classList.remove('active');
+      screenToShow.classList.add('active');
     }
-
-    btnGame.addEventListener('click', showGameScreen);
-    btnLeaderboard.addEventListener('click', showLeaderboardScreen);
+    
+    function setActiveButton(activeBtn) {
+      btnGame.classList.remove('active');
+      btnLeaderboard.classList.remove('active');
+      btnReferrals.classList.remove('active');
+      activeBtn.classList.add('active');
+    }
+    
+    btnGame.addEventListener('click', () => {
+      showScreen(gameScreen);
+      setActiveButton(btnGame);
+    });
+    
+    btnLeaderboard.addEventListener('click', () => {
+      showScreen(leaderboardScreen);
+      setActiveButton(btnLeaderboard);
+      loadLeaderboard();
+    });
+    
+    btnReferrals.addEventListener('click', () => {
+      showScreen(referralsScreen);
+      setActiveButton(btnReferrals);
+      loadReferrals();
+    });
+    
+    fetchBalance();
   </script>
 </body>
 </html>

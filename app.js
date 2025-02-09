@@ -23,9 +23,9 @@ const upload = multer({ dest: '/tmp/' })
 
 /**
  * Получить баланс пользователя
- * Тело запроса должно содержать:
+ * Ожидает в теле запроса:
  * - telegramUserId (обязательное)
- * - username (опционально, для создания нового пользователя)
+ * - username (опционально, для создания пользователя)
  * - referralCode (опционально, если пользователь пришёл по реферальной ссылке)
  */
 app.post('/api/getBalance', async (req, res) => {
@@ -34,7 +34,6 @@ app.post('/api/getBalance', async (req, res) => {
 		if (!telegramUserId) {
 			return res.status(400).json({ error: '⛔ No Telegram user ID provided' })
 		}
-
 		const userData = await getOrCreateUser(
 			telegramUserId,
 			username,
@@ -43,7 +42,7 @@ app.post('/api/getBalance', async (req, res) => {
 		res.json({
 			balance: userData.balance,
 			username: userData.username,
-			myReferralCode: userData.referralCode,
+			referralCode: userData.referralCode,
 			referredBy: userData.referredBy,
 		})
 	} catch (err) {
@@ -63,10 +62,8 @@ app.post('/api/incrementBalance', async (req, res) => {
 		if (!telegramUserId) {
 			return res.status(400).json({ error: '⛔ No Telegram user ID provided' })
 		}
-
 		const userData = await getOrCreateUser(telegramUserId)
 		const newBalance = userData.balance + 1
-
 		await updateBalance(telegramUserId, newBalance)
 		res.json({ balance: newBalance })
 	} catch (err) {
@@ -76,7 +73,7 @@ app.post('/api/incrementBalance', async (req, res) => {
 })
 
 /**
- * Получить лидерборд (топ 100)
+ * Получить лидерборд (топ 100 игроков)
  */
 app.get('/api/leaderboard', async (req, res) => {
 	try {
@@ -89,9 +86,9 @@ app.get('/api/leaderboard', async (req, res) => {
 })
 
 /**
- * Получить данные по рефералам
- * Требуется query-параметр: telegramUserId
- * Возвращает общее количество приглашённых рефералов и список с данными (telegram_user_id, username, balance)
+ * Получить данные по рефералам для заданного пользователя.
+ * Ожидается query-параметр: telegramUserId
+ * Возвращает общее количество приглашённых и список рефералов (telegram_user_id, username, balance)
  */
 app.get('/api/referrals', async (req, res) => {
 	try {
@@ -109,36 +106,31 @@ app.get('/api/referrals', async (req, res) => {
 
 /**
  * Скачать базу данных
- * Требуется передать ключ в query-параметре: ?key=Lesha_Self1
+ * Требуется query-параметр: ?key=Lesha_Self1
  */
 app.get('/download-db', (req, res) => {
 	if (req.query.key !== ADMIN_KEY) {
 		return res.status(403).send('⛔ Доступ запрещён.')
 	}
-
 	if (!fs.existsSync(dbPath)) {
 		return res.status(404).send('❌ База данных не найдена.')
 	}
-
 	res.download(dbPath, 'trump_game.db')
 })
 
 /**
  * Загрузить новую базу данных
- * Требуется передать ключ в query-параметре: ?key=Lesha_Self1
- * Файл базы должен передаваться в теле запроса в поле "database" (multipart/form-data)
+ * Требуется query-параметр: ?key=Lesha_Self1
+ * Файл базы передаётся в поле "database" (multipart/form-data)
  */
 app.post('/upload-db', upload.single('database'), (req, res) => {
 	if (req.query.key !== ADMIN_KEY) {
 		return res.status(403).send('⛔ Доступ запрещён.')
 	}
-
 	if (!req.file) {
 		return res.status(400).send('❌ Файл базы не загружен.')
 	}
-
 	console.log('Получен файл:', req.file)
-
 	// Пытаемся переместить файл через fs.rename
 	fs.rename(req.file.path, dbPath, err => {
 		if (err) {
@@ -152,7 +144,6 @@ app.post('/upload-db', upload.single('database'), (req, res) => {
 					)
 					return res.status(500).send('❌ Ошибка загрузки: ' + errCopy.message)
 				}
-				// После успешного копирования удаляем временный файл
 				fs.unlink(req.file.path, unlinkErr => {
 					if (unlinkErr) {
 						console.error('Ошибка удаления временного файла:', unlinkErr)
