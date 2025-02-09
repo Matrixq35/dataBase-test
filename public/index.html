@@ -181,7 +181,7 @@
         document.getElementById('balanceValue').textContent = data.balance || 0;
         if (data.referralCode) {
           // Формируем реферальную ссылку для Telegram: https://t.me/YourBotUsername?start=REFERRAL_CODE
-          const botUsername = "@aDGage_bot"; // Замените на имя вашего бота
+          const botUsername = "aDGage_bot"; // Замените на имя вашего бота
           const referralLink = "https://t.me/" + botUsername + "?start=" + data.referralCode;
           document.getElementById('referralLink').textContent = referralLink;
         } else {
