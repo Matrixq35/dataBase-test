@@ -2,8 +2,8 @@ const sqlite3 = require('sqlite3').verbose()
 const path = require('path')
 const fs = require('fs')
 
-// Путь к базе данных (если переменная окружения DATABASE_URL не задана, используется '/data/trump_game.db')
-const dbPath = process.env.DATABASE_URL || '/data/trump_game.db'
+// Путь к базе данных
+const dbPath = process.env.DATABASE_URL || 'C:/data/trump_game.db'
 
 // Создаём папку для базы данных, если её нет
 const dbDir = path.dirname(dbPath)
@@ -29,8 +29,6 @@ const db = new sqlite3.Database(dbPath, err => {
 })
 
 // Создаём таблицу пользователей с полями для реферальной системы:
-// referral_code – уникальный код для приглашения,
-// referred_by – telegram_user_id того, кто пригласил пользователя.
 db.serialize(() => {
 	db.run(`
     CREATE TABLE IF NOT EXISTS users (
@@ -51,14 +49,20 @@ function generateReferralCode() {
 
 /**
  * Получить или создать пользователя.
- * Если пользователь новый и передан referralCodeInput, то:
- * – если такой реферальный код найден, начисляется бонус (3000 токенов) рефереру,
- * – в новом пользователе сохраняется, кто его пригласил (referred_by).
- * Если пользователь уже существует, но поле referral_code пустое (например, старый пользователь),
- * то генерируется новый реферальный код и запись обновляется.
- * Если пользователь уже существует и referral_code присутствует, бонус не начисляется повторно,
- * но если в его записи еще не заполнено referred_by и передан referralCodeInput (не совпадающий с его собственным),
- * то производится обновление и начисление бонуса.
+ *
+ * Параметры:
+ * - telegramUserId — уникальный ID пользователя Telegram.
+ * - username — имя пользователя (опционально).
+ * - referralCodeInput — реферальный код, по которому пользователь перешёл (если есть).
+ *
+ * Логика:
+ * 1. Если пользователь уже существует:
+ *    - Если у него отсутствует referral_code, генерируем новый и обновляем запись.
+ *    - Если передан referralCodeInput, а поле referred_by ещё не заполнено и код не совпадает с его собственным,
+ *      то обновляем поле referred_by и начисляем бонус (3000) рефереру.
+ * 2. Если пользователь новый:
+ *    - Вычисляем случайное количество токенов от 100 до 1000.
+ *    - Если передан referralCodeInput и такой пользователь найден, начисляем бонус рефереру (3000) и сохраняем его ID в referred_by.
  */
 function getOrCreateUser(telegramUserId, username, referralCodeInput) {
 	return new Promise((resolve, reject) => {
@@ -82,7 +86,6 @@ function getOrCreateUser(telegramUserId, username, referralCodeInput) {
 										'Ошибка обновления реферального кода:',
 										updateErr
 									)
-									// Если обновление не удалось, возвращаем старую запись (хотя поле пустое)
 									return resolve(row)
 								}
 								row.referral_code = newReferralCode
@@ -97,9 +100,8 @@ function getOrCreateUser(telegramUserId, username, referralCodeInput) {
 						processReferralUpdate(row)
 					}
 
-					// Функция для обработки обновления referred_by, если передан referralCodeInput
+					// Если передан referralCodeInput и пользователь ещё не привязан, обновляем запись
 					function processReferralUpdate(currentRow) {
-						// Проверяем: если передан referralCodeInput, пользователь ещё не привязан и этот код не его собственный
 						if (
 							referralCodeInput &&
 							!currentRow.referred_by &&
@@ -120,7 +122,6 @@ function getOrCreateUser(telegramUserId, username, referralCodeInput) {
 										return resolve(currentRow)
 									}
 									if (refRow) {
-										// Обновляем referred_by и начисляем бонус рефереру
 										db.run(
 											'UPDATE users SET referred_by = ? WHERE telegram_user_id = ?',
 											[refRow.telegram_user_id, telegramUserId],
@@ -160,19 +161,27 @@ function getOrCreateUser(telegramUserId, username, referralCodeInput) {
 						}
 					}
 				} else {
-					// Новый пользователь: генерируем новый реферальный код
+					// Новый пользователь: начисляем случайное количество токенов (100–1000)
+					const randomTokens = Math.floor(Math.random() * 901) + 100 // Случайное число от 100 до 1000
 					const newReferralCode = generateReferralCode()
+
 					function createUser(referrerValue = null) {
 						db.run(
-							'INSERT INTO users (telegram_user_id, balance, username, referral_code, referred_by) VALUES (?, 0, ?, ?, ?)',
-							[telegramUserId, username, newReferralCode, referrerValue],
+							'INSERT INTO users (telegram_user_id, balance, username, referral_code, referred_by) VALUES (?, ?, ?, ?, ?)',
+							[
+								telegramUserId,
+								randomTokens,
+								username,
+								newReferralCode,
+								referrerValue,
+							],
 							function (insertErr) {
 								if (insertErr) return reject(insertErr)
 								const newUser = {
-									balance: 0,
+									balance: randomTokens,
 									username: username,
 									referral_code: newReferralCode,
-									referralCode: newReferralCode, // для единообразия
+									referralCode: newReferralCode,
 									referredBy: referrerValue,
 								}
 								console.log('Создан новый пользователь:', newUser)
@@ -180,6 +189,7 @@ function getOrCreateUser(telegramUserId, username, referralCodeInput) {
 							}
 						)
 					}
+
 					if (referralCodeInput) {
 						db.get(
 							'SELECT telegram_user_id FROM users WHERE referral_code = ?',

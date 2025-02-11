@@ -26,18 +26,20 @@ const upload = multer({ dest: '/tmp/' })
  * Ожидает в теле запроса:
  * - telegramUserId (обязательное)
  * - username (опционально, для создания пользователя)
- * - referralCode (опционально, если пользователь пришёл по реферальной ссылке)
+ * - referralCode (опционально, если пользователь перешёл по реферальной ссылке)
  */
 app.post('/api/getBalance', async (req, res) => {
 	try {
-		const { telegramUserId, username, referralCode } = req.body
+		const { telegramUserId, username, referralCode, accountCreationYear } =
+			req.body
 		if (!telegramUserId) {
 			return res.status(400).json({ error: '⛔ No Telegram user ID provided' })
 		}
 		const userData = await getOrCreateUser(
 			telegramUserId,
 			username,
-			referralCode
+			referralCode,
+			accountCreationYear
 		)
 		res.json({
 			balance: userData.balance,
